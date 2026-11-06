@@ -178,7 +178,12 @@ test("continua interativo no modo compatível quando WebGL está indisponível",
   expect(await view.locator("svg.three-surface path").count()).toBeGreaterThan(
     20,
   );
+  const previousCamera = await view.getAttribute("data-camera");
   await page.getByLabel("Orientação 3D", { exact: true }).selectOption("front");
+  // Aguarde o desenho da nova orientação antes de medir os frames em repouso.
+  await expect
+    .poll(() => view.getAttribute("data-camera"))
+    .not.toBe(previousCamera);
   await expect(
     view.getByRole("button", { name: "Editar cota 3D height", exact: true }),
   ).toBeVisible();
