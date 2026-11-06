@@ -1,0 +1,14 @@
+{
+  "before": {
+    "number10000Ms": 392.57901900000024,
+    "twelveDetailsMedianMs": 118.85767299999998,
+    "checksum": 64597
+  },
+  "after": {
+    "number10000Ms": 74.96500000000015,
+    "twelveDetailsMedianMs": 32.784145000000535,
+    "checksum": 64597,
+    "cachedTwelveDetailsMeanMs": 4.208081899999979
+  },
+  "environment": "Node 24.22.1; benchmark indicativo, não FPS do Tauri"
+}

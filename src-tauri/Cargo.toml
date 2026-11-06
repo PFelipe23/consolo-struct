@@ -1,0 +1,25 @@
+[package]
+name = "consolostruct"
+version = "0.6.0"
+description = "Cálculo ELU e editor de consolos de concreto armado"
+authors = ["OpenStruct contributors"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "consolostruct_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+panic = "abort"

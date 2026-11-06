@@ -1,0 +1,118 @@
+import { area, type Piece } from "./model";
+import { calculate, tieLayout, type CalculationResult } from "./engine";
+export interface DesignProposal {
+  piece: Piece;
+  result: CalculationResult;
+  changed: boolean;
+  message: string;
+  candidates: number;
+}
+/** Finite enumeration; each candidate recomputes d and all simultaneous combinations.
+ * Never invents support reinforcement, weld resistance, joint preparation or an input confirmation. */
+export function suggestReinforcement(input: Piece): DesignProposal {
+  let best: Piece | undefined;
+  let score = Infinity,
+    candidates = 0;
+  const critical = new Set([
+    "tie",
+    "mechanical",
+    "strut",
+    "angleMin",
+    "nodeSupport",
+    "ductility",
+    "bearing",
+    "tieDepth",
+    "clearSpacing",
+    "tieDiameter",
+    "tiePitch",
+    "frontClearance",
+    "loopPin",
+    "loopWidth",
+    "loopEven",
+    "loopSteel",
+    "cover",
+  ]);
+  for (const diameter of [6.3, 8, 10, 12.5, 16, 20, 25]) {
+    for (
+      let count = 2;
+      count <= 24;
+      count += input.design.frontAnchor === "loop" ? 2 : 1
+    ) {
+      for (let layers = 1; layers <= 3; layers++) {
+        const p = structuredClone(input);
+        p.rebar.tieCount = count;
+        p.rebar.tieDiameter = diameter;
+        p.design.tieLayers = layers;
+        if (
+          layers > count ||
+          (p.design.frontAnchor === "loop" &&
+            tieLayout(p).rows.some((row) => row.count % 2))
+        )
+          continue;
+        candidates++;
+        const r = calculate(p);
+        if (
+          !r.combinations.length ||
+          r.checks.some((c) => critical.has(c.id) && c.status === "fail")
+        )
+          continue;
+        const candidateScore =
+          area(count, diameter) + layers * 0.001 + count * 0.00001;
+        if (candidateScore < score) {
+          best = p;
+          score = candidateScore;
+        }
+      }
+    }
+  }
+  if (!best)
+    return {
+      piece: input,
+      result: calculate(input),
+      changed: false,
+      candidates,
+      message:
+        "Nenhum arranjo de tirante atende ao modelo e ao espaço disponível nesta busca (φ 6,3–25; até 24 ramos; até 3 camadas). Revise geometria, apoio e ancoragem frontal. Nenhum dado foi alterado.",
+    };
+  const result = calculate(best),
+    v = result.values;
+  best.rebar.stitchCount = Math.max(
+    1,
+    Math.ceil(v.stitchRequired / area(2, best.rebar.stitchDiameter)),
+    Math.ceil((2 * v.d) / 3 / Math.min(100, best.geometry.loadOffset)),
+  );
+  best.rebar.stirrupCount = Math.max(
+    1,
+    Math.ceil(v.stirrupRequired / area(2, best.rebar.stirrupDiameter)),
+  );
+  best.design.lowerStitchCount =
+    v.lowerRequired > 0
+      ? Math.max(
+          Math.ceil(v.lowerRequired / area(2, best.rebar.stitchDiameter)),
+          Math.ceil(v.d / 3 / Math.min(100, best.geometry.loadOffset)),
+        )
+      : 0;
+  best.design.splittingCount = Math.ceil(
+    v.splittingRequired / area(2, best.design.splittingDiameter),
+  );
+  best.design.suspensionCount = Math.ceil(
+    v.suspensionRequired / area(2, best.design.suspensionDiameter),
+  );
+  const final = calculate(best);
+  if (final.status === "invalid")
+    return {
+      piece: input,
+      result: calculate(input),
+      changed: false,
+      candidates,
+      message:
+        "As armaduras secundárias excedem o domínio de edição. Revise a seção e as bitolas.",
+    };
+  return {
+    piece: best,
+    result: final,
+    changed: JSON.stringify(best) !== JSON.stringify(input),
+    candidates,
+    message: `Arranjo sugerido entre ${candidates} candidatos. Verifique os resultados: ancoragens, suporte e pendências externas permanecem com os dados informados.`,
+  };
+}
