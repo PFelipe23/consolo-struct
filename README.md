@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-3448D1" alt="Licença MIT" /></a>
-  <img src="https://img.shields.io/badge/aplicativo-0.7.0-FF8A3D" alt="Aplicativo 0.7.0" />
+  <img src="https://img.shields.io/badge/aplicativo-0.7.1-FF8A3D" alt="Aplicativo 0.7.1" />
   <a href="https://github.com/ricardocorsini/consolo-struct/actions/workflows/ci.yml"><img src="https://github.com/ricardocorsini/consolo-struct/actions/workflows/ci.yml/badge.svg?branch=master" alt="Integração contínua" /></a>
 </p>
 

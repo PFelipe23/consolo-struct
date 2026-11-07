@@ -2,6 +2,11 @@
 
 Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pressupõe que existam tags, releases publicadas ou instaladores para cada versão.
 
+## 0.7.1
+
+- Corrige o rótulo antigo do motor na barra de status: a interface passa a usar a versão real do núcleo de cálculo.
+- Mantém integralmente as melhorias da revisão Base Consolo 0.7.0 e o motor 0.4.0.
+
 ## 0.7.0
 
 - Motor 0.4.0 / LC-ELU-2026.2: revisão minuciosa do trecho Base Consolo, com matriz de comparação por página e decisão documentada frente às normas.

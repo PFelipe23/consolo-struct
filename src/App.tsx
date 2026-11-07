@@ -64,7 +64,11 @@ import {
   type Piece,
   type Project,
 } from "./domain/model";
-import { calculate, type CalculationResult } from "./domain/engine";
+import {
+  calculate,
+  ENGINE_VERSION,
+  type CalculationResult,
+} from "./domain/engine";
 import { suggestReinforcement } from "./domain/autodesign";
 import CalculationReport, {
   resultLabels,
@@ -1096,7 +1100,7 @@ export default function App() {
             : "Rascunho salvo neste dispositivo"}
         </span>
         <span className="status-prototype">
-          Motor ELU 0.3 · hipóteses e limites na memória
+          Motor ELU {ENGINE_VERSION} · hipóteses e limites na memória
         </span>
         <span className="status-view">
           {page === "workspace" ? `${Math.round(zoom * 100)}%` : "Documento"}
@@ -1129,7 +1133,7 @@ export default function App() {
               {modal === "export"
                 ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
                 : modal === "about"
-                  ? "Editor paramétrico 2D/3D · versão 0.7.0 · detalhamento e quadro de aço."
+                  ? "Editor paramétrico 2D/3D · versão 0.7.1 · detalhamento e quadro de aço."
                   : modal === "delete"
                     ? `${p.name} será removido. Você poderá desfazer esta ação.`
                     : "Estas informações ficam salvas no arquivo do projeto."}
@@ -1434,7 +1438,7 @@ export default function App() {
                 <p className="about-stack">
                   Tauri 2 · React · TypeScript · SVG
                   <br />
-                  Código aberto sob licença MIT · v0.7.0
+                  Código aberto sob licença MIT · v0.7.1
                 </p>
                 <button
                   className="button"
