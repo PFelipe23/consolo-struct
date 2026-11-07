@@ -1,0 +1,68 @@
+{
+  "notice": "Saída derivada do programa; não é validação independente nem um exemplo publicado no livro.",
+  "units": "mm, N, mm²",
+  "cases": [
+    {
+      "name": "Base normativa",
+      "engine": "0.4.0",
+      "policy": "LC-ELU-2026.2",
+      "status": "pass",
+      "a": 300,
+      "H": 15000,
+      "As": 442.272,
+      "AsElDebs": 271.5808913971493,
+      "eContato": 1.0714285714285714,
+      "costura": 321.6990877275948,
+      "espacamentoCostura": 55.19666666666667,
+      "reasons": [],
+      "pendencias": []
+    },
+    {
+      "name": "Complementos El Debs",
+      "engine": "0.4.0",
+      "policy": "LC-ELU-2026.2",
+      "status": "pass",
+      "a": 300,
+      "H": 30000,
+      "As": 442.272,
+      "AsElDebs": 310.18298241805945,
+      "eContato": 2.142857142857143,
+      "costura": 321.6990877275948,
+      "espacamentoCostura": 55.19666666666667,
+      "reasons": [],
+      "pendencias": []
+    },
+    {
+      "name": "Reação 3/4 L — ductilidade",
+      "engine": "0.4.0",
+      "policy": "LC-ELU-2026.2",
+      "status": "fail",
+      "a": 375,
+      "H": 30000,
+      "As": 442.272,
+      "AsElDebs": 368.4276825121192,
+      "eContato": 12.142857142857142,
+      "costura": 321.6990877275948,
+      "espacamentoCostura": 55.19666666666667,
+      "reasons": [],
+      "pendencias": ["ductility"]
+    },
+    {
+      "name": "Contato parcial — bloqueado",
+      "engine": "0.4.0",
+      "policy": "LC-ELU-2026.2",
+      "status": "unsupported",
+      "a": null,
+      "H": null,
+      "As": null,
+      "AsElDebs": null,
+      "eContato": null,
+      "costura": null,
+      "espacamentoCostura": null,
+      "reasons": [
+        "[Principal] A resultante no apoio sai do núcleo central (Δa + H·hapoio/V > c/6). O modelo de contato integral não é aplicável; verificar contato parcial e dispositivo de apoio."
+      ],
+      "pendencias": []
+    }
+  ]
+}

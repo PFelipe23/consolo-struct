@@ -243,7 +243,7 @@ test("memória só monta as verificações da combinação ao expandir", async (
   await page.locator(".report-paper .case-memory > summary").first().click();
   await expect(
     page.locator(".report-paper .case-memory .calculation-table"),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
   await expect(
     page
       .locator(".brand-signature")

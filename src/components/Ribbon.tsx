@@ -332,7 +332,7 @@ export default function Ribbon({
             {t}
           </button>
         ))}
-        <span className="ribbon-version">CONSOLOSTRUCT 0.6 · DETALHAMENTO</span>
+        <span className="ribbon-version">CONSOLOSTRUCT 0.7 · DETALHAMENTO</span>
       </div>
       <div
         className="ribbon-panel"

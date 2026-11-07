@@ -1,5 +1,6 @@
 import { calculate, tieLayout, type CalculationResult } from "../domain/engine";
 import { geometryErrors, type Piece } from "../domain/model";
+import { upperStitchLayout } from "../domain/theory";
 import {
   closedStirrup,
   mandrelDiameter,
@@ -399,12 +400,9 @@ export function buildDetail(piece: Piece): Detail {
         "O espaçamento real da costura ultrapassa o limite adotado no cálculo.",
       );
   };
-  const zone = (2 * layout.d) / 3;
-  const stitchStart =
-    layout.maxDepth +
-    r.stitchDiameter / 2 +
-    Math.max(20, r.stitchDiameter, 0.5 * q.aggregate);
-  const stitchEnd = layout.dPrime + zone;
+  const upperStitch = upperStitchLayout(p, layout);
+  const stitchStart = upperStitch.start;
+  const stitchEnd = upperStitch.end;
   if (stitchStart >= stitchEnd)
     issue(
       "stitch-zone",

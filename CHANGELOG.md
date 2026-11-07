@@ -2,6 +2,16 @@
 
 Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pressupõe que existam tags, releases publicadas ou instaladores para cada versão.
 
+## 0.7.0
+
+- Motor 0.4.0 / LC-ELU-2026.2: revisão minuciosa do trecho Base Consolo, com matriz de comparação por página e decisão documentada frente às normas.
+- Complementos explícitos de El Debs para H, tirante, biela, tensão de referência, costura, estribos e altura da ponta; novos projetos vêm habilitados, projetos antigos preservam sua opção.
+- Posição de cálculo da reação independente do aparelho, envelope 3/4 L e deslocamento c_ap/6; verificação conjunta com o efeito de H no contato.
+- Memória, PDF e JSON com comparação dos modelos, equações completas, valores intermediários e domínios de aplicação.
+- Corrigida a divergência entre espaçamento calculado e desenhado da costura superior; eixos compartilhados entre motor, detalhe e vistas.
+- Exemplos novos e testes analíticos de equilíbrio, mínimos, contato, compatibilidade e interface.
+- Projetos salvos no esquema 4, com importação de 1–3, para preservar as novas opções de cálculo contra descarte em versões antigas.
+
 ## 0.6.0
 
 ### Interface e navegação

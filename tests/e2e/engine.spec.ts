@@ -42,6 +42,53 @@ test("calcula, altera ancoragem e identifica a revisão obsoleta", async ({
     page.locator("tr").filter({ hasText: "Ancoragem do tirante no suporte" }),
   ).toContainText("Não atende");
 });
+test("ativa complementos e exporta a reação deslocada com os mesmos valores da memória", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Critérios de cálculo", exact: true })
+    .click();
+  await page
+    .getByLabel("Aplicar recomendações complementares de El Debs")
+    .check();
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await expect(
+    page
+      .locator("tr")
+      .filter({ hasText: "Força horizontal mínima complementar" })
+      .first(),
+  ).toContainText("Não atende");
+  await page
+    .getByLabel("Aplicar recomendações complementares de El Debs")
+    .uncheck();
+  await page.getByLabel("Altura da linha de H acima do concreto").fill("0");
+  await page
+    .getByLabel("Altura da linha de H acima do concreto")
+    .press("Enter");
+  await page
+    .getByLabel("Posição de cálculo da reação vertical")
+    .selectOption("outerThird");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Cálculo auditável/ }).click();
+  const file = await download;
+  const data = JSON.parse(await readFile((await file.path())!, "utf8"));
+  expect(data.input.geometry.loadOffset).toBe(300);
+  expect(data.result.values.a).toBeCloseTo(316.6666666666667);
+  expect(data.result.values.bearingCenter).toBe(300);
+  expect(data.result.values.bearingStress).toBeCloseTo(8);
+  await page
+    .locator(".document-tabs")
+    .getByRole("button", { name: "Memória", exact: true })
+    .click();
+  const memory = page.locator(".report-paper");
+  await memory.locator(".case-memory > summary").first().click();
+  await expect(
+    memory.getByRole("table", { name: "Comparação dos modelos · Principal" }),
+  ).toBeVisible();
+  await expect(memory).toContainText("El Debs · equilíbrio completo");
+});
 test("inclui combinação, exporta memória auditável e preserva simultaneidade", async ({
   page,
 }) => {
@@ -64,7 +111,7 @@ test("inclui combinação, exporta memória auditável e preserva simultaneidade
   await page.getByRole("button", { name: /Cálculo auditável/ }).click();
   const file = await dl;
   const r = JSON.parse(await readFile((await file.path())!, "utf8"));
-  expect(r.result.engineVersion).toBe("0.3.0");
+  expect(r.result.engineVersion).toBe("0.4.0");
   expect(r.result.combinations).toHaveLength(2);
   expect(r.result.combinations[1].values.vertical).toBe(200000);
   expect(r.result.combinations[1].values.horizontal).toBe(20000);

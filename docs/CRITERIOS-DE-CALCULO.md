@@ -1,4 +1,12 @@
-# Motor 0.3.0 — critérios LC-ELU-2026.1
+# Motor 0.4.0 — critérios LC-ELU-2026.2
+
+A revisão 0.7 acrescenta a política complementar e a reação deslocada descritas em [Comparação Base Consolo](COMPARACAO-BASE-CONSOLO.md). As equações abaixo definem a base normativa/documentada; quando o complemento está ativo, usa-se ainda o envelope bibliográfico explicitado na seção seguinte.
+
+## Complementos El Debs e reação deslocada
+
+Trecho §3.5.1, pp.125–130: com a opção ativa, H estimado recebe piso 0,20V (H de análise é preservado e verificado), h2≥h/2, costura≥0,5Va/(0,9d fy), estribos verticais≥0,2As,tirante. Em 0,4≤a/d≤1, As do tirante recebe também o equilíbrio completo de El Debs e verificam-se τ≤0,20fcd e a biela simplificada com z=0,9d, hbie=0,2d e β=1/0,85. Mantém-se o termo Hdh. Esses complementos não substituem exigências normativas. Peças novas ativam a opção; arquivos anteriores sem esse campo a importam desativada.
+
+A cota geométrica a é o centro do aparelho. A posição de cálculo a_calc pode ser deslocada para fora em c_ap/6 ou envelopada por max(a;0,75L). A excentricidade total é Δa+Hh_ap/V e precisa permanecer no núcleo c_ap/6 para contato integral. Na abertura geométrica usa-se c_eff=c_ap−2|Δa|, subárea conservadora contida no aparelho; a2 continua medido até sua borda física. O novo a_calc governa classificação e equilíbrio.
 
 ## Alcance
 
@@ -37,7 +45,7 @@ A edição bibliográfica completa dos dois livros não foi inferida a partir de
 
 Internamente: **mm, N, MPa = N/mm² e mm²**. Na interface: cm, kN, MPa e cm², sempre com conversão explícita. Contagens inteiras. Sem arredondamento intermediário; arredondar somente na apresentação.
 
-- `a`: distância da face do suporte à linha vertical da força, centrada no comprimento do apoio.
+- `a` geométrico: distância da face do suporte ao centro físico do apoio; `a_calc`: distância até a resultante adotada, coincidente com a quando não há deslocamento.
 - `bearingLength`: comprimento da área de transmissão na direção de a; não é o cobrimento.
 - `bearingWidth`: largura efetiva transversal centrada. Não se presume dispersão transversal até toda a largura do consolo.
 - `bearingHeight`: altura da linha de ação de H acima da superfície superior do concreto.
@@ -162,7 +170,7 @@ Mínimo mecânico: `ω=(As,ef/bd) fyk/fck > 0,04`. A desigualdade é estrita e v
 
 ## Compressão sob apoio e fendilhamento
 
-O carregamento vertical é centrado no comprimento informado. A altura da linha de H gera excentricidade local `e_ap=Hd h_ap/Vd`. Para contato integral, assume-se distribuição linear e verifica-se:
+O carregamento vertical é centrado no comprimento informado. A altura da linha de H gera excentricidade local `e_ap=Δa+Hd h_ap/Vd`. Para contato integral, assume-se distribuição linear e verifica-se:
 
 `σmax = Vd/(b_eff c_ap) × (1+6 e_ap/c_ap) ≤ fcd3`.
 
@@ -186,7 +194,7 @@ Altura da zona superior: `z_cost=2d/3`.
 
 `Ascost,req = max(r9062 z_cost; rmin z_cost; 0,4As,tir,ef [curto]; kAsv [complemento El Debs])`.
 
-Quantidade mínima: arredondar para cima considerando **dois ramos** por estribo. Além da área, verificar φ ≤ min(b,h)/15, espaçamento ≤ min(100 mm; a) e espaço livre adotado construtivamente para concretagem. A distribuição é por faixas tributárias, meia distância nas extremidades. No muito curto, o terço inferior recebe costura mínima adicional.
+Quantidade mínima: arredondar para cima considerando **dois ramos** por estribo. Além da área, verificar φ ≤ min(b,h)/15, espaçamento ≤ min(100 mm; a_calc) e espaço livre adotado construtivamente para concretagem. O cálculo usa os eixos reais da costura superior: primeira barra abaixo da última camada do tirante, última em d′+2d/3, espaçamento entre eixos (yúltima−yprimeira)/(n−1). O detalhamento e as vistas usam a mesma distribuição. Para uma barra só, o vão tributário adotado é 2d/3. Verifica-se também se a zona comporta a costura. No muito curto, o terço inferior recebe costura mínima adicional.
 
 Para ação direta, N3 ≥ 0,0015bh. Para ação indireta, N5 ≥ Vd/fywd e não se inclui a mesma área em duas famílias. Arranjo e ancoragem dos estribos secundários precisam ser definidos no detalhamento executivo; o desenho esquemático não os certifica.
 

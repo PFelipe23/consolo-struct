@@ -29,7 +29,7 @@ export function toSvg(p: Piece): string {
   const path = piecePoints(p)
     .map(([x, y]) => `${x},${-y}`)
     .join(" ");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}"><rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.6 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}"><rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.7 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text></g></svg>`;
 }
 export function toDxf(p: Piece): string {
   const g = p.geometry;
@@ -95,7 +95,7 @@ export function toDxf(p: Piece): string {
     40,
     Math.max(g.height * 0.035, 8),
     1,
-    "ConsoloStruct 0.6 - GEOMETRIA NAO EXECUTIVA - NAO EXECUTIVO",
+    "ConsoloStruct 0.7 - GEOMETRIA NAO EXECUTIVA - NAO EXECUTIVO",
   );
   lines.push(0, "ENDSEC", 0, "EOF");
   return lines.join("\n") + "\n";
@@ -107,7 +107,7 @@ const csvCell = (v: unknown) =>
 export function toCsv(project: Project) {
   const rows: unknown[][] = [
     [
-      "ConsoloStruct 0.6 - Quantidades e verificacoes ELU; consultar memoria e pendencias",
+      "ConsoloStruct 0.7 - Quantidades e verificacoes ELU; consultar memoria e pendencias",
     ],
     [
       "Peca",
@@ -198,6 +198,7 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[γ]/g, "gamma")
       .replace(/α/g, "alpha")
+      .replace(/β/g, "beta")
       .replace(/η/g, "eta")
       .replace(/θ/g, "theta")
       .replace(/σ/g, "sigma")
@@ -324,14 +325,49 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       ["d", v.d, "mm"],
       ["d'", v.dPrime, "mm"],
       ["a/d", v.ratio, ""],
+      ["Centro fisico do apoio", v.bearingCenter, "mm"],
+      ["a de calculo", v.a, "mm"],
+      ["Deslocamento da reacao", v.reactionShift, "mm"],
+      ["Excentricidade total no contato", v.bearingEccentricity, "mm"],
+      [
+        "Comprimento efetivo da subarea de apoio",
+        v.effectiveBearingLength,
+        "mm",
+      ],
+      ["Piso bibliografico para H", v.horizontalFloor, "N"],
+      ["Parcela de H acrescentada pelo piso", v.horizontalFloorAdded, "N"],
+      ["Complementos El Debs ativos (1=sim)", v.literatureEnabled, ""],
       ["As necessaria", v.tieRequired, "mm2"],
       ["As efetiva", v.tieProvided, "mm2"],
       ["As modelo resistente", v.tieModel, "mm2"],
       ["As minima por flexao", v.tieMinimumFlexure, "mm2"],
       ["As minima mecanica", v.tieMinimumMechanical, "mm2"],
+      [
+        "As modelo geometrico Araujo (auxiliar)",
+        v.stm_tieForce / v.fydLimited,
+        "mm2",
+      ],
+      ["As simplificado NBR 9062 (auxiliar)", v.tie9062, "mm2"],
+      ["As El Debs equilibrio completo (3.18)", v.tieElDebs, "mm2"],
+      [
+        "As El Debs aproximacao 1,2 H (3.19), auxiliar",
+        v.elDebs_tieForceApprox / v.fydLimited,
+        "mm2",
+      ],
+      ["As atrito-cisalhamento (auxiliar)", v.tieFriction, "mm2"],
+      ["Sigma biela simplificada El Debs (3.22)", v.elDebs_strutStress, "MPa"],
+      ["Limite beta fcd da biela simplificada", v.elDebs_strutLimit, "MPa"],
+      ["Termo Hd dh / (Vd a), mantido", v.elDebs_horizontalMomentRatio, ""],
+      [
+        "Tau limite simplificado sem termo de H (3.25), auxiliar",
+        v.elDebs_tauLimit,
+        "MPa",
+      ],
       ["Asv para costura", v.asV, "mm2"],
       ["Costura por unidade de altura", v.stitchRate, "mm2/mm"],
       ["As costura superior", v.stitchRequired, "mm2"],
+      ["As costura complementar El Debs (3.27)", v.stitchLiterature, "mm2"],
+      ["Espacamento real da costura no detalhe", v.stitchSpacing, "mm"],
       ["As costura inferior", v.lowerRequired, "mm2"],
       ["As vertical construtiva", v.stirrupRequired, "mm2"],
       ["As fendilhamento transversal", v.splittingRequired, "mm2"],
@@ -369,6 +405,9 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
     "El Debs: Concreto pre-moldado, trecho cap.4, especialmente 4.3.1.1 e 4.4.4. Araujo: Curso de Concreto Armado, v.4, trecho cap.4, secao 4.5. Formulas historicas sao adaptadas segundo a politica documentada; nao se presume equivalencia normativa entre edicoes.",
   );
   line(
+    "Material adicional: Base Consolo, trecho El Debs secao 3.5.1, pp.125-130, equacoes 3.18-3.27 e quadro 3.2. As recomendacoes bibliograficas sao identificadas separadamente das exigencias normativas. Modelos auxiliares nao sao aplicaveis fora de seu dominio.",
+  );
+  line(
     "Veja docs/CRITERIOS-DE-CALCULO.md e docs/VALIDACAO-MOTOR.md no pacote de codigo. O arquivo .calc.json exporta todas as entradas e resultados com precisao completa.",
   );
   title("Apendice: snapshot integral das entradas (mm, N, MPa)");
@@ -383,7 +422,7 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
     doc.setFontSize(8);
     doc.setTextColor(100);
     doc.text(
-      `ConsoloStruct 0.6 | OPENSTRUCT | Motor ${ENGINE_VERSION} | ${ascii(p.name).slice(0, 35)} | ${i}/${pages}`,
+      `ConsoloStruct 0.7 | OPENSTRUCT | Motor ${ENGINE_VERSION} | ${ascii(p.name).slice(0, 35)} | ${i}/${pages}`,
       18,
       287,
     );

@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { FileText } from "lucide-react";
 import type { Piece, Project } from "../domain/model";
-import type { CalculationResult } from "../domain/engine";
+import { ENGINE_VERSION, type CalculationResult } from "../domain/engine";
 import CalculationReport from "./CalculationReport";
 import BrandSignature from "./BrandSignature";
 function MemoryPage({
@@ -48,7 +48,7 @@ function MemoryPage({
       <article className="report-paper">
         <div className="report-brand">
           <BrandSignature />
-          <span>MEMÓRIA DE CÁLCULO · MOTOR 0.3.0</span>
+          <span>MEMÓRIA DE CÁLCULO · MOTOR {ENGINE_VERSION}</span>
         </div>
         <div className="eyebrow">{project.name}</div>
         <h2>

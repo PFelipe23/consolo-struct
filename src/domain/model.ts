@@ -42,7 +42,7 @@ export const pieceSchema = z.object({
 });
 export const projectSchema = z.object({
   format: z.literal("lumeconsolo"),
-  schemaVersion: z.literal(3),
+  schemaVersion: z.literal(4),
   name: z.string().min(1).max(120),
   client: z.string().max(120),
   author: z.string().max(120),
@@ -159,7 +159,7 @@ export function exampleProject(): Project {
   second.rebar.tieDiameter = 16;
   return {
     format: "lumeconsolo",
-    schemaVersion: 3,
+    schemaVersion: 4,
     name: "Pavilhão Horizonte",
     client: "Projeto de demonstração",
     author: "",
@@ -221,10 +221,19 @@ export function decodeProject(text: string): Project {
       ),
     };
   }
+  // Schema 4 prevents older applications from silently discarding the new calculation policy.
+  if (
+    data &&
+    typeof data === "object" &&
+    "schemaVersion" in data &&
+    data.schemaVersion === 3
+  ) {
+    data = { ...data, schemaVersion: 4 };
+  }
   const parsed = projectSchema.safeParse(data);
   if (!parsed.success)
     throw new Error(
-      "Projeto inválido ou versão não suportada. Use um arquivo .lume.json compatível (esquemas 1, 2 ou 3).",
+      "Projeto inválido ou versão não suportada. Use um arquivo .lume.json compatível (esquemas 1, 2, 3 ou 4).",
     );
   return parsed.data;
 }

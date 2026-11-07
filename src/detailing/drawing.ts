@@ -9,6 +9,7 @@ import {
 } from "./geometry";
 import { type Bar, type Detail } from "./model";
 import { pinCenters } from "./model";
+import { reactionGeometry } from "../domain/theory";
 
 export type Layer =
   | "FORMAS"
@@ -266,7 +267,7 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   text(
     10,
     26,
-    `Tirante: ${r.tieCount} ramos em ${q.tieLayers} camada(s)${q.tieLayers === 2 ? " · TIRANTE DUPLO" : ""} · V${q.forceMode === "design" ? "d" : "k"}=${number(p.loads.vertical / 1000, 1)} kN · H${q.forceMode === "design" ? "d" : "k"}=${number(p.loads.horizontal / 1000, 1)} kN`,
+    `Tirante: ${r.tieCount} ramos em ${q.tieLayers} camada(s)${q.tieLayers === 2 ? " · TIRANTE DUPLO" : ""} · V${q.forceMode === "design" ? "d" : "k"}=${number(p.loads.vertical / 1000, 1)} kN · H${q.forceMode === "design" ? "d" : "k"}=${number(p.loads.horizontal / 1000, 1)} kN · a_calc=${cm(reactionGeometry(p).a)} cm`,
     2.3,
   );
   text(

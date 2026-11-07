@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-3448D1" alt="Licença MIT" /></a>
-  <img src="https://img.shields.io/badge/aplicativo-0.6.0-FF8A3D" alt="Aplicativo 0.6.0" />
+  <img src="https://img.shields.io/badge/aplicativo-0.7.0-FF8A3D" alt="Aplicativo 0.7.0" />
   <a href="https://github.com/ricardocorsini/consolo-struct/actions/workflows/ci.yml"><img src="https://github.com/ricardocorsini/consolo-struct/actions/workflows/ci.yml/badge.svg?branch=master" alt="Integração contínua" /></a>
 </p>
 
@@ -19,6 +19,7 @@ O projeto está em desenvolvimento. **Atender às verificações implementadas n
 ## Recursos
 
 - Consolos simples curtos e muito curtos, com modelos de bielas e tirantes e de atrito-cisalhamento.
+- Complementos de El Debs, reação deslocada e comparação de modelos na memória.
 - Entradas, combinações simultâneas, verificações e memória rastreável por peça.
 - Sugestão de armaduras, com revisão dos critérios e histórico de alterações.
 - Vistas 2D e 3D, pan/zoom e edição das dimensões pelo desenho.
@@ -81,13 +82,15 @@ Abra o endereço informado pelo Vite. Após gerar `dist/`, também é possível 
 
 ## Escopo de engenharia
 
-O **motor 0.3.0**, política **LC-ELU-2026.1**, trata o ELU estático local de consolos simples de concreto armado. Os critérios implementados se apoiam nas NBR 6118:2026 e 9062:2017 e nos modelos documentados de Araújo e El Debs. A versão do aplicativo e a do motor são identificações independentes.
+O **motor 0.4.0**, política **LC-ELU-2026.2**, trata o ELU estático local de consolos simples de concreto armado. Os critérios implementados se apoiam nas NBR 6118:2026 e 9062:2017 e nos modelos documentados de Araújo e El Debs. A versão do aplicativo e a do motor são identificações independentes.
 
 O escopo atual não inclui dentes Gerber, consolos duplos/contínuos, `a/d > 1`, análise resistente espacial, fadiga, ELS/fissuração, estrutura global, verificação completa do aparelho de apoio, pinos/chumbadores ou compatibilização integral com a armadura do suporte. As combinações são fornecidas pelo usuário. Há situações que exigem conferência complementar, inclusive no modelo de atrito e em ligações especiais.
 
 O motor distingue atendimento, falha, revisão necessária, entrada inválida e domínio não implementado. O desenho 3D é uma visualização; os [limites do detalhamento](docs/DETALHAMENTO.md) e do modelo resistente continuam aplicáveis. A responsabilidade de projeto e revisão permanece com o profissional habilitado.
 
 Normas, livros e desenhos de terceiros usados como referência **não são redistribuídos neste repositório**. Os exemplos incluídos são casos de estudo para conferência.
+
+Confira a [comparação minuciosa com Base Consolo](docs/COMPARACAO-BASE-CONSOLO.md) e o exemplo [base-consolo.lume.json](examples/base-consolo.lume.json).
 
 ## Documentação
 

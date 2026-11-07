@@ -25,6 +25,7 @@ export function shortFixture() {
   };
   p.design = {
     ...p.design,
+    literatureRecommendations: false,
     forceMode: "design",
     horizontalMode: "analysis",
     horizontalJustification:

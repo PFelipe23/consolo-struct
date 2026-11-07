@@ -1,5 +1,6 @@
 import { number, type GeometryKey, type Piece } from "../domain/model";
 import { tieLayout } from "../domain/engine";
+import { reactionGeometry, upperStitchLayout } from "../domain/theory";
 
 /** World coordinates in mm: X = corbel length, Y = width, Z = up. */
 export type Point3 = [number, number, number];
@@ -43,9 +44,11 @@ export function buildSceneModel(p: Piece): SceneModel {
     q = p.design,
     r = p.rebar;
   const span = Math.max(g.columnWidth + g.length, g.height, g.width);
+  const reaction = reactionGeometry(p);
   const margin = Math.max(22, span * 0.075),
     side = g.width / 2;
-  const { d, dPrime, rows } = tieLayout(p);
+  const layout = tieLayout(p);
+  const { d, dPrime, rows } = layout;
   const dim = (
     id: GeometryKey,
     symbol: string,
@@ -170,25 +173,25 @@ export function buildSceneModel(p: Piece): SceneModel {
   if (p.loads.vertical !== 0)
     loads.push({
       id: "vertical",
-      label: `${vLabel} = ${number(p.loads.vertical / 1000, 1)} kN`,
+      label: `${vLabel} = ${number(p.loads.vertical / 1000, 1)} kN${reaction.shift ? ` · a_calc ${number(reaction.a / 10, 1)} cm` : ""}`,
       value: p.loads.vertical,
-      from: [g.loadOffset, 0, q.bearingHeight + span * 0.26],
-      to: [g.loadOffset, 0, q.bearingHeight],
-      anchor: [g.loadOffset, 0, q.bearingHeight + span * 0.29],
+      from: [reaction.a, 0, q.bearingHeight + span * 0.26],
+      to: [reaction.a, 0, q.bearingHeight],
+      anchor: [reaction.a, 0, q.bearingHeight + span * 0.29],
     });
   if (p.loads.horizontal !== 0)
     loads.push({
       id: "horizontal",
       label: `${hLabel} = ${number(p.loads.horizontal / 1000, 1)} kN`,
       value: p.loads.horizontal,
-      from: [g.loadOffset, 0, q.bearingHeight],
+      from: [reaction.a, 0, q.bearingHeight],
       to: [
-        g.loadOffset + Math.sign(p.loads.horizontal) * span * 0.24,
+        reaction.a + Math.sign(p.loads.horizontal) * span * 0.24,
         0,
         q.bearingHeight,
       ],
       anchor: [
-        g.loadOffset + Math.sign(p.loads.horizontal) * span * 0.27,
+        reaction.a + Math.sign(p.loads.horizontal) * span * 0.27,
         0,
         q.bearingHeight + margin * 0.65,
       ],
@@ -232,9 +235,8 @@ export function buildSceneModel(p: Piece): SceneModel {
     ];
     steel.push({ id: "N2", diameter: r.stitchDiameter, points });
   };
-  for (let i = 0; i < r.stitchCount; i++)
-    costura(dPrime + ((i + 0.5) * 2 * d) / 3 / r.stitchCount);
-  if (g.loadOffset / d <= 0.5)
+  for (const depth of upperStitchLayout(p, layout).levels) costura(depth);
+  if (reaction.a / d <= 0.5)
     for (let i = 0; i < q.lowerStitchCount; i++)
       costura(dPrime + (2 * d) / 3 + ((i + 0.5) * d) / 3 / q.lowerStitchCount);
   for (let i = 0; i < r.stirrupCount; i++) {

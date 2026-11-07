@@ -74,6 +74,15 @@ export default function DesignPanel({
           ["strut", "Bielas e tirantes"],
           ["friction", "Atrito-cisalhamento"],
         ])}
+        {toggle(
+          "literatureRecommendations",
+          "Aplicar recomendações complementares de El Debs",
+        )}
+        <small>
+          Inclui H ≥ 0,20 V, ponta ≥ h/2, costura de 50% da parcela vertical e
+          estribos ≥ 20% do tirante. Em 0,4 ≤ a/d ≤ 1, verifica também o modelo
+          simplificado e τ ≤ 0,20 fcd. A memória compara os métodos.
+        </small>
         {select("forceMode", "Nível das forças informadas", [
           ["characteristic", "Características: aplicar γf × γn"],
           ["design", "De cálculo: já incluem γf e γn"],
@@ -141,6 +150,16 @@ export default function DesignPanel({
           "cm",
           10,
         )}
+        {select("reactionPosition", "Posição de cálculo da reação vertical", [
+          ["specified", "No centro do apoio informado"],
+          ["outerThird", "Deslocar para fora em c_ap/6"],
+          ["threeQuarter", "Envelopar com a ≥ 0,75 L (El Debs)"],
+        ])}
+        <small>
+          O centro físico do apoio permanece na cota a. O deslocamento da reação
+          soma-se ao efeito de H no contato; fora do núcleo central, o programa
+          solicita uma análise de contato parcial.
+        </small>
         {select("joint", "Junta junto ao suporte", [
           ["monolithic", "Concretagem monolítica · μ = 1,4"],
           ["rough", "Junta rugosa · μ = 1,0"],

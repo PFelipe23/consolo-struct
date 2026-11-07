@@ -213,7 +213,7 @@ export async function drawingPdf(drawings: Drawing[]): Promise<Uint8Array> {
   doc.setProperties({
     title: "ConsoloStruct - detalhamento de consolos",
     subject: "Dimensões em centímetros; detalhes soltos; escala nominal 1:10",
-    creator: "ConsoloStruct 0.6",
+    creator: "ConsoloStruct 0.7",
   });
   drawings.forEach((drawing, index) => {
     if (drawing.width > 4500 || drawing.height > 4500)

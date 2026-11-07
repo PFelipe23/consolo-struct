@@ -151,6 +151,27 @@ function CalculationReport({
                       ["Vd", c.values.vertical / 1000, "kN"],
                       ["Hd", c.values.horizontal / 1000, "kN"],
                       [
+                        "Centro físico do apoio",
+                        c.values.bearingCenter / 10,
+                        "cm",
+                      ],
+                      ["a de cálculo", c.values.a / 10, "cm"],
+                      [
+                        "Deslocamento da reação",
+                        c.values.reactionShift / 10,
+                        "cm",
+                      ],
+                      [
+                        "Excentricidade total no contato",
+                        c.values.bearingEccentricity / 10,
+                        "cm",
+                      ],
+                      [
+                        "H acrescentado pelo piso bibliográfico",
+                        c.values.horizontalFloorAdded / 1000,
+                        "kN",
+                      ],
+                      [
                         "γn aplicado às ações características",
                         c.values.gammaN,
                         "",
@@ -184,6 +205,80 @@ function CalculationReport({
                       </div>
                     ))}
                   </div>
+                  <h4>Comparação dos modelos</h4>
+                  <div className="calculation-table-wrap">
+                    <table
+                      className="calculation-table"
+                      aria-label={`Comparação dos modelos · ${c.name}`}
+                    >
+                      <thead>
+                        <tr>
+                          <th>Modelo / condição</th>
+                          <th>As do tirante</th>
+                          <th>Concreto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Geométrico de Araújo · monolítico</td>
+                          <td>
+                            {number(
+                              c.values.stm_tieForce / c.values.fydLimited / 100,
+                              3,
+                            )}{" "}
+                            cm²
+                          </td>
+                          <td>
+                            σb = {number(c.values.stm_strutStress, 3)} MPa
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>NBR 9062 simplificado · 0,5 &lt; a/d ≤ 1</td>
+                          <td>{number(c.values.tie9062 / 100, 3)} cm²</td>
+                          <td>Conferir biela e nós</td>
+                        </tr>
+                        <tr>
+                          <td>El Debs · equilíbrio completo (3.18)</td>
+                          <td>{number(c.values.tieElDebs / 100, 3)} cm²</td>
+                          <td>
+                            σc = {number(c.values.elDebs_strutStress, 3)} MPa
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>El Debs · aproximação 1,2 H (3.19), auxiliar</td>
+                          <td>
+                            {number(
+                              c.values.elDebs_tieForceApprox /
+                                c.values.fydLimited /
+                                100,
+                              3,
+                            )}{" "}
+                            cm²
+                          </td>
+                          <td>Não substitui a altura real de H</td>
+                        </tr>
+                        <tr>
+                          <td>Atrito-cisalhamento · a/d ≤ 0,5</td>
+                          <td>{number(c.values.tieFriction / 100, 3)} cm²</td>
+                          <td>
+                            τ = {number(c.values.tau, 3)} /{" "}
+                            {number(c.values.tauLimit, 3)} MPa
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="table-note">
+                    {c.values.literatureEnabled
+                      ? "Complementos de El Debs ativados."
+                      : "Complementos de El Debs desativados."}{" "}
+                    A comparação não torna aplicável um modelo fora do seu
+                    domínio. A expressão simplificada do concreto, equações
+                    3.22–3.25, usa z = 0,9d, hbie = 0,2d e mantém Hd·dh. Costura
+                    complementar = {number(c.values.stitchLiterature / 100, 3)}{" "}
+                    cm²; estribos complementares ={" "}
+                    {number(c.values.stirrupLiterature / 100, 3)} cm².
+                  </p>
                   <p className="table-note">
                     Grandezas dos modelos alternativos são auxiliares; somente o
                     método identificado acima e seus critérios de envelope

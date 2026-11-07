@@ -1,4 +1,6 @@
-# Validação do motor 0.3.0
+# Validação do motor
+
+Na revisão 0.7.0, o motor passa a 0.4.0 / LC-ELU-2026.2. Consulte o [registro atual](VALIDACAO-0.7.md) e a [comparação Base Consolo](COMPARACAO-BASE-CONSOLO.md). Os casos analíticos históricos abaixo continuam cobertos pelos testes; o espaçamento agora usa a disposição física das barras.
 
 ## Base e grau de validação
 

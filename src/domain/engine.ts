@@ -6,9 +6,14 @@ import {
   volume,
   type Piece,
 } from "./model";
+import {
+  elDebsSimplified,
+  reactionGeometry,
+  upperStitchLayout,
+} from "./theory";
 
-export const ENGINE_VERSION = "0.3.0";
-export const POLICY = "LC-ELU-2026.1";
+export const ENGINE_VERSION = "0.4.0";
+export const POLICY = "LC-ELU-2026.2";
 export type CheckStatus = "pass" | "fail" | "review" | "na";
 export interface Check {
   id: string;
@@ -44,12 +49,14 @@ export interface CalculationResult {
   assumptions: string[];
 }
 const refs = {
-  safety: "NBR 6118:2026 §22.2; NBR 9062:2017 §7.3.1.1; política LC-ELU-2026.1",
+  safety: "NBR 6118:2026 §22.2; NBR 9062:2017 §7.3.1.1; política LC-ELU-2026.2",
   geometry: "NBR 9062:2017 §7.3.3",
   stm: "Araújo, v.4, §4.5, eq.4.5.2–4.5.12; NBR 6118:2026 §22.3 e §22.5.1",
   friction: "NBR 9062:2017 §7.3.4.2 e §7.3.5.4",
   stitch: "NBR 9062:2017 §7.3.6; NBR 6118:2026 §22.5.1.4.3; El Debs §4.4.4",
   anchor: "NBR 6118:2026 §9.3.2, §9.4.2.4–6; NBR 9062:2017 §7.3.5.5",
+  literature:
+    "El Debs, trecho fornecido §3.5.1, pp.125–130, eqs.3.18–3.27 e quadro 3.2; complemento bibliográfico",
 };
 const supportRatios = {
   dry: 0.8,
@@ -262,7 +269,8 @@ function calculateCase(
     r = p.rebar,
     q = p.design,
     b = g.width,
-    a = g.loadOffset;
+    reaction = reactionGeometry(p),
+    a = reaction.a;
   const layout = tieLayout(p),
     d = layout.d,
     dp = layout.dPrime,
@@ -302,10 +310,17 @@ function calculateCase(
     q.horizontalMode === "estimated"
       ? supportRatios[q.supportType] * vertical
       : 0;
-  const horizontal = horizontalProvided + horizontalEstimated;
+  const horizontalBeforeFloor = horizontalProvided + horizontalEstimated;
+  const horizontalFloor = q.literatureRecommendations ? 0.2 * vertical : 0;
+  // An analysed pair is not silently rewritten. The book's floor is a separate check.
+  const horizontal =
+    q.horizontalMode === "estimated"
+      ? Math.max(horizontalBeforeFloor, horizontalFloor)
+      : horizontalBeforeFloor;
   const asTie = area(r.tieCount, r.tieDiameter),
     fy = m.fydLimited;
-  const bearingEccentricity = (horizontal * q.bearingHeight) / vertical;
+  const bearingEccentricity =
+    reaction.shift + (horizontal * q.bearingHeight) / vertical;
   const bearingStress =
     (vertical / (q.bearingWidth * q.bearingLength)) *
     (1 + (6 * bearingEccentricity) / q.bearingLength);
@@ -316,17 +331,25 @@ function calculateCase(
     a,
     d,
     dPrime: dp,
-    bearingLength: q.bearingLength,
+    bearingLength: reaction.effectiveLength,
     width: q.bearingWidth,
     loadHeight: q.bearingHeight,
     maxTangent: classification === "veryShort" ? 1.4 : 2,
   });
   const frictionAs = (0.8 * vertical) / (fy * mu) + horizontal / fy;
   const shortNormAs = ((0.1 + ratio) * vertical) / fy + horizontal / fy;
-  const elDebsAs =
-    ((vertical * a) / (0.9 * d) +
-      horizontal * (1 + (dp + q.bearingHeight) / (0.9 * d))) /
-    fy;
+  const elDebs = elDebsSimplified({
+    vertical,
+    horizontal,
+    a,
+    d,
+    loadHeight: dp + q.bearingHeight,
+    width: b,
+    fcd: m.fcd,
+    indirect: q.loadType === "indirect",
+  });
+  const elDebsAs = elDebs.tieForce / fy;
+  const literatureDomain = ratio >= 0.4 && ratio <= 1;
   const asModel =
     method === "strut"
       ? Math.max(
@@ -342,7 +365,12 @@ function calculateCase(
     p.materials.fyk,
   );
   const asMechanical = ((0.04 * p.materials.fck) / p.materials.fyk) * b * d;
-  const tieRequired = Math.max(asModel, minFlex.required, asMechanical);
+  const tieRequired = Math.max(
+    asModel,
+    minFlex.required,
+    asMechanical,
+    q.literatureRecommendations && literatureDomain ? elDebsAs : 0,
+  );
   const asV =
     method === "friction"
       ? Math.max((0.8 * vertical) / (fy * mu), (vertical * a) / (0.9 * d) / fy)
@@ -352,7 +380,8 @@ function calculateCase(
   const tauLimitSteel = 3 + 0.9 * rho * fy;
   const tauLimitConcrete = 0.27 * m.alphaV2 * m.fcd;
   const tauLimit = Math.min(tauLimitSteel, tauLimitConcrete, 8);
-  const a2 = g.length - a - q.bearingLength / 2;
+  // Edge clearances refer to the actual pad, not the shifted reaction or the sub-area.
+  const a2 = g.length - g.loadOffset - q.bearingLength / 2;
   const frontClearanceRequired =
     q.frontAnchor === "welded"
       ? g.cover + r.tieDiameter
@@ -369,13 +398,22 @@ function calculateCase(
     totalLiterature / zone,
   );
   const stitchRequired = stitchRate * zone;
+  const stitchLiterature = (0.5 * elDebs.tieVertical) / fy;
+  const stitchEnvelope = q.literatureRecommendations
+    ? Math.max(stitchRequired, stitchLiterature)
+    : stitchRequired;
   const stitchProvided = 2 * area(r.stitchCount, r.stitchDiameter);
-  const stitchSpacing = zone / r.stitchCount,
+  const stitchLayout = upperStitchLayout(p, layout);
+  const stitchSpacing = stitchLayout.pitch,
     stitchSpacingLimit = Math.min(100, a);
   const lowerZone = d / 3,
     lowerRequired = classification === "veryShort" ? 0.0015 * b * lowerZone : 0;
   const lowerProvided = 2 * area(q.lowerStitchCount, r.stitchDiameter);
-  const stirrupRequired = q.loadType === "direct" ? 0.0015 * b * g.height : 0;
+  const stirrupNormative = q.loadType === "direct" ? 0.0015 * b * g.height : 0;
+  const stirrupLiterature = 0.2 * asTie;
+  const stirrupRequired = q.literatureRecommendations
+    ? Math.max(stirrupNormative, stirrupLiterature)
+    : stirrupNormative;
   const stirrupProvided = 2 * area(r.stirrupCount, r.stirrupDiameter);
   const suspensionRequired = q.loadType === "indirect" ? vertical / m.fywd : 0;
   const suspensionProvided = 2 * area(q.suspensionCount, q.suspensionDiameter);
@@ -421,6 +459,57 @@ function calculateCase(
         : 6;
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
+  if (q.literatureRecommendations) {
+    add(
+      check(
+        "literatureHorizontal",
+        "Força horizontal mínima complementar (El Debs)",
+        horizontalFloor,
+        horizontal,
+        "N",
+        "Hd ≥ 0,20 Vd",
+        refs.literature,
+        "Recomendação bibliográfica ativada. Em H por análise, o par informado é conservado e a insuficiência é indicada; em H estimado, aplica-se o piso sem somá-lo novamente.",
+      ),
+    );
+    add(
+      check(
+        "literatureTip",
+        "Altura da ponta complementar (El Debs)",
+        g.height / 2,
+        g.tipHeight,
+        "mm",
+        "h2 ≥ h/2",
+        refs.literature,
+        "Recomendação mais restritiva que h2 ≥ h/2−a2 da NBR 9062. Não substitui a verificação normativa.",
+      ),
+    );
+    if (literatureDomain) {
+      add(
+        check(
+          "literatureConcrete",
+          "Tensão de referência complementar (El Debs)",
+          tau,
+          0.2 * m.fcd,
+          "MPa",
+          "τwd = Vd/(b d) ≤ 0,20 fcd; 0,4 ≤ a/d ≤ 1",
+          refs.literature,
+        ),
+      );
+      add(
+        check(
+          "literatureStrut",
+          "Biela simplificada complementar (El Debs)",
+          elDebs.strutStress,
+          elDebs.strutLimit,
+          "MPa",
+          "z=0,9d; hbie=0,2d; Rc=(Vd a+Hd dh)/abie; σc=Rc/(0,2bd) ≤ βfcd",
+          refs.literature,
+          "Mantido o termo Hd·dh, sem a aproximação de desprezá-lo. β=1 para carga direta e 0,85 para indireta. O modelo geométrico e seus nós continuam verificados.",
+        ),
+      );
+    }
+  }
   add(
     check(
       "tie",
@@ -428,7 +517,7 @@ function calculateCase(
       tieRequired,
       asTie,
       "mm²",
-      "As,req = max(As,modelo; As,min,6118; 0,04 fck/fyk · b d)",
+      "As,req = max(As,modelo; As,min,6118; 0,04 fck/fyk · b d; As,ElDebs se habilitado no domínio)",
       "NBR 9062 §7.3.5; NBR 6118 §17.3.5.2.1 e §22.5.1.4.1",
       "A área inclui a parcela horizontal e as armaduras mínimas.",
     ),
@@ -492,7 +581,7 @@ function calculateCase(
         model.tieForce * concreteScale,
         "N",
         "As,ef·fyd ≤ T·min(fcd2/σb; fcd3/σapoio; fcd1/σn)",
-        "NBR 6118 §22.5.1.2(b); verificação mecânica LC-ELU-2026.1",
+        "NBR 6118 §22.5.1.2(b); verificação mecânica LC-ELU-2026.2",
         "Comparação de limites no modelo adotado, sob crescimento proporcional de Vd e Hd. Não é uma verificação de ductilidade global da estrutura.",
       ),
     );
@@ -526,19 +615,19 @@ function calculateCase(
       bearingStress,
       m.fcd3,
       "MPa",
-      "eapoio = Hd·hapoio/Vd; σmax = Vd/(c·beff)·(1+6eapoio/c) ≤ 0,72 αv2 fcd",
+      "eapoio = Δa + Hd·hapoio/Vd; σmax = Vd/(c·beff)·(1+6eapoio/c) ≤ 0,72 αv2 fcd",
       "NBR 6118 §22.3.2 e §22.5.1.4.2",
-      "Distribuição linear de compressão, seção inteira em contato (eapoio ≤ c/6), V centrado no apoio. Inclui o efeito da altura de H; não admite tração de contato nem ganho por confinamento. Rigidez e resistência do aparelho exigem verificação própria.",
+      "Distribuição linear de compressão e contato integral (eapoio ≤ c/6). Inclui deslocamento da reação e altura de H, somados antes de verificar o núcleo. Não admite tração de contato nem ganho por confinamento; o aparelho exige verificação própria.",
     ),
   );
   add(
     check(
       "stitch",
       "Costura nos 2/3 d superiores",
-      stitchRequired,
+      stitchEnvelope,
       stitchProvided,
       "mm²",
-      "As,cost = max(r9062·2d/3; 0,0015b·2d/3; 0,4As,tir [curto]; kAsv)",
+      "As,cost = max(r9062·2d/3; 0,0015b·2d/3; 0,4As,tir [curto]; kAsv; 0,5 Vd a/(0,9d fy) se El Debs ativado)",
       refs.stitch,
       "N2 conta estribos horizontais fechados, com dois ramos efetivos. k=0,4 curto / 0,5 muito curto: complemento conservador de El Debs.",
     ),
@@ -550,9 +639,20 @@ function calculateCase(
       stitchSpacing,
       stitchSpacingLimit,
       "mm",
-      "s = (2d/3)/n ≤ min(100; a)",
+      "s = (yúltima−yprimeira)/(n−1) ≤ min(100; a); para n=1, s=2d/3",
       "NBR 9062 §7.3.3.12",
-      "Distribuição uniforme por faixas tributárias, com meia distância nas extremidades da zona.",
+      "Espaçamento real dos eixos desenhados, abaixo da última camada do tirante e dentro dos 2/3 d superiores. Não se usa mais zona/n quando o detalhe tem outra distribuição.",
+    ),
+  );
+  add(
+    check(
+      "stitchZone",
+      "Costura cabe abaixo do tirante",
+      stitchLayout.start,
+      stitchLayout.end,
+      "mm",
+      "yprimeira ≤ d′+2d/3",
+      refs.stitch,
     ),
   );
   add(
@@ -608,9 +708,9 @@ function calculateCase(
       stirrupRequired,
       stirrupProvided,
       "mm²",
-      "As,vert ≥ 0,0015 b h (carga direta)",
+      "As,vert ≥ max(0,0015 b h [direta]; 0,2 As,tir [se El Debs ativado])",
       "NBR 9062 §7.3.7.2",
-      "N3 conta estribos fechados, com dois ramos. Não inclui a armadura adicional de suspensão N5.",
+      "N3 conta estribos fechados, com dois ramos. Complemento de El Debs p.129(e) quando ativado; N5 de suspensão permanece independente, sem dupla contagem.",
     ),
   );
   if (q.loadType === "indirect")
@@ -642,7 +742,7 @@ function calculateCase(
     check(
       "bearingInside",
       "Apoio contido no comprimento",
-      a + q.bearingLength / 2,
+      g.loadOffset + q.bearingLength / 2,
       g.length,
       "mm",
       "a + c/2 ≤ L",
@@ -654,7 +754,7 @@ function calculateCase(
       "bearingInner",
       "Face interna do apoio",
       q.bearingLength / 2,
-      a,
+      g.loadOffset,
       "mm",
       "a − c/2 ≥ 0",
       refs.geometry,
@@ -924,7 +1024,7 @@ function calculateCase(
         "reviewInputs",
         "Conferência dos dados de cálculo",
         "Dados novos ou migrados ainda não foram conferidos. Verificar apoio, ações, ancoragens, material, hipótese de carga no plano e contagem de estribos (dois ramos, diferente da área ilustrativa da versão 0.2).",
-        "Controle de entrada LC-ELU-2026.1",
+        "Controle de entrada LC-ELU-2026.2",
       ),
     );
   if (q.joint === "rough" && !q.roughnessConfirmed)
@@ -949,6 +1049,10 @@ function calculateCase(
     ...m,
     d,
     dPrime: dp,
+    a,
+    bearingCenter: reaction.center,
+    reactionShift: reaction.shift,
+    effectiveBearingLength: reaction.effectiveLength,
     ratio,
     gammaN,
     gammaN9062: gn9062,
@@ -958,6 +1062,8 @@ function calculateCase(
     horizontal,
     horizontalProvided,
     horizontalEstimated,
+    horizontalFloor,
+    horizontalFloorAdded: horizontal - horizontalBeforeFloor,
     bearingEccentricity,
     bearingStress,
     mu,
@@ -979,14 +1085,18 @@ function calculateCase(
     tieMinimumMechanical: asMechanical,
     minMoment: minFlex.moment,
     asV,
-    stitchRate,
-    stitchRequired,
+    stitchRate: stitchEnvelope / zone,
+    stitchNormative: stitchRequired,
+    stitchLiterature,
+    stitchRequired: stitchEnvelope,
     stitchProvided,
     stitchSpacing,
     stitchSpacingLimit,
     lowerRequired,
     lowerProvided,
     stirrupRequired,
+    stirrupNormative,
+    stirrupLiterature,
     stirrupProvided,
     suspensionRequired,
     suspensionProvided,
@@ -1000,6 +1110,11 @@ function calculateCase(
     a2,
     frontClearanceRequired,
     minCover,
+    literatureEnabled: q.literatureRecommendations ? 1 : 0,
+    literatureDomain: literatureDomain ? 1 : 0,
+    ...Object.fromEntries(
+      Object.entries(elDebs).map(([k, v]) => [`elDebs_${k}`, v]),
+    ),
   };
   return {
     name: load.name,
@@ -1027,6 +1142,10 @@ export function calculate(p: Piece): CalculationResult {
       "γc=1,4 e γs=1,15 (combinações normais); γn ≥ 1,2 por compatibilização conservadora das duas normas fornecidas.",
       "As combinações de ações são fornecidas pelo usuário. Valores de cálculo já incluem γn; não são majorados novamente.",
       "No modo estimado, Hd = coeficiente do apoio × Vd + H adicional positivo. No modo análise, H é a resultante total justificada. Compressão horizontal favorável é ignorada.",
+      p.design.literatureRecommendations
+        ? "Complementos de El Debs §3.5.1, pp.125–130 ativados: H≥0,20V, h2≥h/2, costura de 50% da parcela vertical simplificada, estribos verticais≥20% do tirante e, em 0,4≤a/d≤1, envelope do tirante e limites complementares do concreto. Não constituem novos requisitos da ABNT."
+        : "Complementos de El Debs §3.5.1 desativados. Modelos auxiliares são comparativos e não alteram o envelope normativo/documentado da versão anterior.",
+      "a informado posiciona o centro físico do apoio. A posição de cálculo da reação e seu deslocamento são registrados separadamente; o braço de H é d′+hapoio.",
       "A armadura mínima e a costura usam o envelope documentado das normas e dos complementos bibliográficos, sem copiar limites históricos revogados.",
       "N1 é número de ramos longitudinais. N2/N3/N4/N5 são estribos fechados com dois ramos efetivos e ancorados; áreas informadas de suporte/confinamento são efetivas, não áreas brutas arbitrárias.",
       "Não há verificação automática de ELS/fissuração, fadiga, torção espacial, estabilidade global, pinos/chumbadores, soldabilidade ou aparelho elastomérico. O desenho e o DXF ainda não são detalhamento executivo.",
@@ -1043,6 +1162,8 @@ export function calculate(p: Piece): CalculationResult {
     g = p.geometry,
     q = p.design,
     layout = tieLayout(p);
+  const reaction = reactionGeometry(p);
+  const ratio = reaction.a / layout.d;
   if (
     errors.length ||
     layout.d <= 0 ||
@@ -1061,7 +1182,7 @@ export function calculate(p: Piece): CalculationResult {
     return base;
   }
   const unsupported: string[] = [];
-  if (g.loadOffset / layout.d > 1)
+  if (ratio > 1)
     unsupported.push(
       "a/d > 1: o elemento deve ser tratado como viga em balanço; não é calculado pelo motor de consolos curtos.",
     );
@@ -1073,19 +1194,14 @@ export function calculate(p: Piece): CalculationResult {
     unsupported.push(
       "Excentricidade transversal ou força fora do plano: requer modelo espacial.",
     );
-  if (q.method === "friction" && g.loadOffset / layout.d > 0.5)
+  if (q.method === "friction" && ratio > 0.5)
     unsupported.push("Atrito-cisalhamento só é implementado para a/d ≤ 0,5.");
-  if (
-    q.method === "strut" &&
-    g.loadOffset / layout.d <= 0.5 &&
-    q.joint !== "monolithic"
-  )
+  if (q.method === "strut" && ratio <= 0.5 && q.joint !== "monolithic")
     unsupported.push(
       "O prolongamento do modelo de Araújo para consolo muito curto exige concretagem monolítica.",
     );
   if (
-    (q.method === "strut" ||
-      (q.method === "auto" && g.loadOffset / layout.d > 0.5)) &&
+    (q.method === "strut" || (q.method === "auto" && ratio > 0.5)) &&
     q.joint !== "monolithic"
   )
     unsupported.push(
@@ -1115,7 +1231,7 @@ export function calculate(p: Piece): CalculationResult {
   if (
     q.includeSelfWeight &&
     q.forceMode === "characteristic" &&
-    centroidX > g.loadOffset
+    centroidX > reaction.a
   )
     unsupported.push(
       "O centroide do peso próprio está além da força concentrada. Inclua seu efeito em uma combinação equivalente justificada e desative a adição automática.",
@@ -1126,14 +1242,26 @@ export function calculate(p: Piece): CalculationResult {
       "Cada combinação deve conter carga vertical descendente positiva; carga nula ou inversão não pertence ao modelo implementado.",
     );
   for (const load of allLoads) {
-    const hRatio =
-      Math.max(0, load.horizontal) / load.vertical +
+    const weight =
+      q.includeSelfWeight && q.forceMode === "characteristic"
+        ? volume(g) * 25000
+        : 0;
+    const rawRatio =
+      Math.max(0, load.horizontal) / (load.vertical + weight) +
       (q.horizontalMode === "estimated" ? supportRatios[q.supportType] : 0);
-    if (hRatio * q.bearingHeight > q.bearingLength / 6)
+    const hRatio =
+      q.horizontalMode === "estimated" && q.literatureRecommendations
+        ? Math.max(rawRatio, 0.2)
+        : rawRatio;
+    if (reaction.shift + hRatio * q.bearingHeight > q.bearingLength / 6 + 1e-8)
       unsupported.push(
-        `[${load.name}] A resultante no apoio sai do núcleo central (H·hapoio/V > c/6). O modelo de contato integral não é aplicável; verificar contato parcial e dispositivo de apoio.`,
+        `[${load.name}] A resultante no apoio sai do núcleo central (Δa + H·hapoio/V > c/6). O modelo de contato integral não é aplicável; verificar contato parcial e dispositivo de apoio.`,
       );
   }
+  if (reaction.effectiveLength <= 0)
+    unsupported.push(
+      "A posição da reação não cabe no aparelho de apoio. Reveja o centro, comprimento e deslocamento selecionado.",
+    );
   if (unsupported.length) {
     base.status = "unsupported";
     base.reasons = unsupported;

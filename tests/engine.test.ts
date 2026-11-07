@@ -122,6 +122,7 @@ describe("Ações, materiais e consistência", () => {
   ] as const)("coeficiente de apoio %s", (type, coef) => {
     const p = newPiece(1);
     p.design.supportType = type;
+    p.design.literatureRecommendations = false;
     p.loads.horizontal = 0;
     const v = calculate(p).values;
     expect(v.horizontal / v.vertical).toBeCloseTo(coef, 12);
@@ -129,6 +130,7 @@ describe("Ações, materiais e consistência", () => {
   it("ignora H favorável e não subtrai da estimativa", () => {
     const p = newPiece(1);
     p.loads.horizontal = -90000;
+    p.design.literatureRecommendations = false;
     const v = calculate(p).values;
     expect(v.horizontalProvided).toBe(0);
     expect(v.horizontal).toBeCloseTo(0.16 * v.vertical, 8);
@@ -318,7 +320,7 @@ describe("Limites, combinações e rastreabilidade", () => {
       }),
     };
     const restored = decodeProject(JSON.stringify(old));
-    expect(restored.schemaVersion).toBe(3);
+    expect(restored.schemaVersion).toBe(4);
     expect(restored.pieces[0].design.inputsConfirmed).toBe(false);
   });
   it("os resultados são determinísticos e não alteram a entrada", () => {

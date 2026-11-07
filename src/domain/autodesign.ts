@@ -1,5 +1,6 @@
 import { area, type Piece } from "./model";
 import { calculate, tieLayout, type CalculationResult } from "./engine";
+import { reactionGeometry, upperStitchLayout } from "./theory";
 export interface DesignProposal {
   piece: Piece;
   result: CalculationResult;
@@ -31,6 +32,10 @@ export function suggestReinforcement(input: Piece): DesignProposal {
     "loopEven",
     "loopSteel",
     "cover",
+    "literatureHorizontal",
+    "literatureTip",
+    "literatureConcrete",
+    "literatureStrut",
   ]);
   for (const diameter of [6.3, 8, 10, 12.5, 16, 20, 25]) {
     for (
@@ -80,6 +85,15 @@ export function suggestReinforcement(input: Piece): DesignProposal {
     1,
     Math.ceil(v.stitchRequired / area(2, best.rebar.stitchDiameter)),
     Math.ceil((2 * v.d) / 3 / Math.min(100, best.geometry.loadOffset)),
+  );
+  const actualStitch = upperStitchLayout(best, tieLayout(best));
+  best.rebar.stitchCount = Math.max(
+    best.rebar.stitchCount,
+    1 +
+      Math.ceil(
+        (actualStitch.end - actualStitch.start) /
+          Math.min(100, reactionGeometry(best).a),
+      ),
   );
   best.rebar.stirrupCount = Math.max(
     1,

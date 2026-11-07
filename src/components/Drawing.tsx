@@ -1,4 +1,5 @@
 import { tieLayout } from "../domain/engine";
+import { reactionGeometry, upperStitchLayout } from "../domain/theory";
 import { useId } from "react";
 import { number, type Piece, type GeometryKey } from "../domain/model";
 type Props = {
@@ -96,14 +97,11 @@ export default function Drawing({
 }: Props) {
   const uid = useId().replaceAll(":", "");
   const g = p.geometry;
+  const reaction = reactionGeometry(p);
   const layout = tieLayout(p);
   const stitchLevels = [
-    ...Array.from(
-      { length: p.rebar.stitchCount },
-      (_, i) =>
-        layout.dPrime + ((i + 0.5) * 2 * layout.d) / 3 / p.rebar.stitchCount,
-    ),
-    ...(g.loadOffset / layout.d <= 0.5
+    ...upperStitchLayout(p, layout).levels,
+    ...(reaction.a / layout.d <= 0.5
       ? Array.from(
           { length: p.design.lowerStitchCount },
           (_, i) =>
@@ -360,16 +358,12 @@ export default function Drawing({
             {forces && (
               <>
                 <path
-                  d={`M${X(g.loadOffset)} ${Y(-100)}V${Y(-9)}`}
+                  d={`M${X(reaction.a)} ${Y(-100)}V${Y(-9)}`}
                   stroke="var(--force)"
                   strokeWidth="2.5"
                   markerEnd={`url(#${uid}arrow)`}
                 />
-                <text
-                  className="force-label"
-                  x={X(g.loadOffset) + 12}
-                  y={Y(-85)}
-                >
+                <text className="force-label" x={X(reaction.a) + 12} y={Y(-85)}>
                   {p.design.forceMode === "design" ? "Vd" : "Vk"} ={" "}
                   {number(p.loads.vertical / 1000, 0)} kN
                 </text>
@@ -378,8 +372,8 @@ export default function Drawing({
                     <path
                       d={
                         p.loads.horizontal > 0
-                          ? `M${X(g.loadOffset)} ${Y(-15)}h65`
-                          : `M${X(g.loadOffset)} ${Y(-15)}h-65`
+                          ? `M${X(reaction.a)} ${Y(-15)}h65`
+                          : `M${X(reaction.a)} ${Y(-15)}h-65`
                       }
                       stroke="var(--force)"
                       strokeWidth="2"
@@ -387,7 +381,7 @@ export default function Drawing({
                     />
                     <text
                       className="force-label"
-                      x={X(g.loadOffset) + 12}
+                      x={X(reaction.a) + 12}
                       y={Y(-15) - 12}
                     >
                       {p.design.horizontalMode === "estimated"
@@ -424,6 +418,16 @@ export default function Drawing({
                   onClick={(anchor) => onDimension("loadOffset", anchor)}
                   active={focus === "loadOffset"}
                 />
+                {reaction.shift !== 0 && (
+                  <text
+                    className="drawing-caption"
+                    x={X(reaction.a)}
+                    y={Y(g.height + 75)}
+                    textAnchor="middle"
+                  >
+                    a_calc = {number(reaction.a / 10, 1)} cm
+                  </text>
+                )}
                 <Dim
                   x1={X(g.length) + 38}
                   y1={Y(0)}

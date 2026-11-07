@@ -1129,7 +1129,7 @@ export default function App() {
               {modal === "export"
                 ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
                 : modal === "about"
-                  ? "Editor paramétrico 2D/3D · versão 0.6.0 · detalhamento e quadro de aço."
+                  ? "Editor paramétrico 2D/3D · versão 0.7.0 · detalhamento e quadro de aço."
                   : modal === "delete"
                     ? `${p.name} será removido. Você poderá desfazer esta ação.`
                     : "Estas informações ficam salvas no arquivo do projeto."}
@@ -1152,7 +1152,7 @@ export default function App() {
                     const fresh = newPiece(1);
                     commit({
                       format: "lumeconsolo",
-                      schemaVersion: 3,
+                      schemaVersion: 4,
                       name: form.name.trim(),
                       client: form.client.trim(),
                       author: form.author.trim(),
@@ -1434,7 +1434,7 @@ export default function App() {
                 <p className="about-stack">
                   Tauri 2 · React · TypeScript · SVG
                   <br />
-                  Código aberto sob licença MIT · v0.6.0
+                  Código aberto sob licença MIT · v0.7.0
                 </p>
                 <button
                   className="button"

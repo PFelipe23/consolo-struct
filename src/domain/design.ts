@@ -5,6 +5,11 @@ const length = z.number().finite().min(0).max(10000);
 const diameter = z.number().finite().min(5).max(25);
 export const designSchema = z.object({
   method: z.enum(["auto", "strut", "friction"]),
+  // Missing fields preserve the policy of projects saved before 0.7.
+  literatureRecommendations: z.boolean().default(false),
+  reactionPosition: z
+    .enum(["specified", "outerThird", "threeQuarter"])
+    .default("specified"),
   production: z.enum(["factory", "precast", "cast"]),
   permanentPredominant: z.boolean(),
   gammaN: z.number().finite().min(1.2).max(3),
@@ -80,6 +85,8 @@ export function defaultDesign(
 ): DesignSettings {
   return {
     method: "auto",
+    literatureRecommendations: true,
+    reactionPosition: "specified",
     production: "precast",
     permanentPredominant: true,
     gammaN: 1.2,
