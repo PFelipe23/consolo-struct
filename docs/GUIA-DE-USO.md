@@ -93,6 +93,8 @@ As exportações de cálculo usam entradas atuais. No detalhamento, exportar pod
 
 ## Limites essenciais
 
-Não estão incluídos dentes Gerber, consolos duplos/contínuos, a/d > 1, fadiga, ELS/fissuração, estrutura global, análise resistente espacial, dimensionamento dos pinos/chumbadores, aparelho de apoio completo, metalurgia das soldas ou compatibilização integral com as armaduras do suporte. Ductilidade do modelo de atrito e situações especiais de alça/gancho continuam com pendências explícitas.
+Peças com 1 < a/d ≤ 2 são calculadas como viga em balanço (flexão simples e cisalhamento pelo Modelo I) quando o modelo resistente está em **Automático por a/d**; bielas e tirantes ou atrito escolhidos explicitamente nessa faixa são recusados. Acima de 600 mm de altura, a armadura de pele dessa faixa aparece como pendência a conferir, pois não é detalhada pelo programa. A viga em balanço não tem verificação de ELS, fissuração ou flecha.
+
+Não estão incluídos dentes Gerber, consolos duplos/contínuos, a/d > 2, fadiga, ELS/fissuração, estrutura global, análise resistente espacial, dimensionamento dos pinos/chumbadores, aparelho de apoio completo, metalurgia das soldas ou compatibilização integral com as armaduras do suporte. Ductilidade do modelo de atrito e situações especiais de alça/gancho continuam com pendências explícitas.
 
 O aplicativo aceita até 200 tipos de peça, 20 combinações adicionais por peça e projetos JSON de até 2 MB. Salve cópias de seus arquivos e retire dados privados antes de compartilhar exemplos em issues.

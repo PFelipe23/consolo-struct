@@ -1,6 +1,6 @@
 import { calculate, tieLayout, type CalculationResult } from "../domain/engine";
 import { geometryErrors, type Piece } from "../domain/model";
-import { upperStitchLayout } from "../domain/theory";
+import { stirrupLayout, upperStitchLayout } from "../domain/theory";
 import {
   closedStirrup,
   mandrelDiameter,
@@ -425,12 +425,12 @@ export function buildDetail(piece: Piece): Detail {
     lowerEnd,
     "lower",
   );
-  const transverseOffset = g.cover + r.stirrupDiameter / 2;
-  const first = transverseOffset,
-    last = g.length - transverseOffset;
-  const pitch = r.stirrupCount > 1 ? (last - first) / (r.stirrupCount - 1) : 0;
-  for (let i = 0; i < r.stirrupCount; i++) {
-    const x = r.stirrupCount === 1 ? (first + last) / 2 : first + pitch * i;
+  const {
+    offset: transverseOffset,
+    pitch,
+    positions: stirrupPositions,
+  } = stirrupLayout(p);
+  for (const x of stirrupPositions) {
     const width = g.width - 2 * transverseOffset,
       height = bottomAt(x, transverseOffset) - transverseOffset;
     const mandrel = mandrelDiameter(r.stirrupDiameter, q.fykTransverse, true);

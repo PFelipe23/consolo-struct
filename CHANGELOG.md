@@ -11,6 +11,12 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 - Centraliza rótulos, ícones e ajuda em um catálogo tipado. Padroniza Salvar projeto e Detalhamento e distingue edição de armaduras/ações da visibilidade das vistas. Mantém controles contextuais e exportadores especializados.
 - Preserva alturas do ribbon, permite rolagem das abas e melhora a legibilidade dos botões. Expõe estados dos modos locais e retorna o foco ao comando que abriu um diálogo.
 - Move Tema de Exibir para a central Configurações integrada, mantendo também o acesso rápido. Nenhuma alteração no motor, formato de projeto, unidades ou conteúdo das exportações.
+- Viga em balanço para `1 < a/d ≤ 2` (issue #6): no modo automático, o motor deixa de devolver `unsupported` e calcula flexão simples (bloco retangular), tração horizontal, cisalhamento pelo Modelo I com `Vc = 0`, estribos com mínimo e espaçamento máximo, costura até h = 600 mm e armadura de pele em revisão acima disso, em paridade com o GN Corbel. Novas verificações `beamDomain`, `beamShear`, `beamStirrups`, `beamStirrupSpacing`, `beamStitch` e `beamSkin`; classificação `cantilever` e método `beam`.
+- Domínio inválido da flexão deixa a armadura indeterminada, sem número sentinela. Bielas e tirantes e os complementos de El Debs não se aplicam nessa faixa; mantém-se o piso `Hd ≥ 0,20 Vd`.
+- `a/d > 2` continua fora do domínio, com nova mensagem; bielas e tirantes ou atrito explícitos com `a/d > 1` orientam para o modo automático.
+- O passo dos estribos N3 passa a vir de uma função compartilhada entre motor e detalhamento.
+- Memória, PDF e cálculo auditável com rótulo "Viga em balanço" e valores do modelo; sugestão de armaduras considera as novas verificações.
+- Nenhum resultado muda para `a/d ≤ 1`. Referências normativas do modelo citadas no GN Corbel, com conferência pendente.
 
 ## 0.7.1
 

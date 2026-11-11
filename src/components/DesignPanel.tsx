@@ -81,7 +81,8 @@ export default function DesignPanel({
         <small>
           Inclui H ≥ 0,20 V, ponta ≥ h/2, costura de 50% da parcela vertical e
           estribos ≥ 20% do tirante. Em 0,4 ≤ a/d ≤ 1, verifica também o modelo
-          simplificado e τ ≤ 0,20 fcd. A memória compara os métodos.
+          simplificado e τ ≤ 0,20 fcd. A memória compara os métodos. Na viga em
+          balanço (1 &lt; a/d ≤ 2) vale apenas H ≥ 0,20 V.
         </small>
         {select("forceMode", "Nível das forças informadas", [
           ["characteristic", "Características: aplicar γf × γn"],

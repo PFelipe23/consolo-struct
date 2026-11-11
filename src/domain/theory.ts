@@ -19,6 +19,21 @@ export function upperStitchLayout(
   return { start, end, pitch, levels };
 }
 
+/** Shared N3 distribution: the engine checks the same pitch that detailing draws.
+ * Closed vertical stirrups between the cover lines along the corbel length. */
+export function stirrupLayout(p: Piece) {
+  const g = p.geometry,
+    count = p.rebar.stirrupCount;
+  const offset = g.cover + p.rebar.stirrupDiameter / 2;
+  const first = offset,
+    last = g.length - offset;
+  const pitch = count > 1 ? (last - first) / (count - 1) : 0;
+  const positions = Array.from({ length: count }, (_, i) =>
+    count === 1 ? (first + last) / 2 : first + pitch * i,
+  );
+  return { offset, first, last, pitch, positions };
+}
+
 /** The pad stays at loadOffset. Only the reaction moves; no drawing geometry is relocated. */
 export function reactionGeometry(p: Piece) {
   const center = p.geometry.loadOffset;
