@@ -4,6 +4,10 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Centraliza CA-25/CA-50/CA-60, fyk, η1, fatores de pino e restrições de dobramento em `domain/steel.ts`, preservando resultados e fórmulas. η1 do CA-60 permanece 1,00, pendente de confirmação pelo responsável técnico quanto à superfície do fio/barra, conforme issue #3.
+- Substitui o fyk livre do tirante por seletor de classe em Materiais. Números legados, como 420 MPa, abrem como Personalizado, continuam `unsupported` e são preservados até escolha explícita, sem mudança do esquema numérico ou de sua versão.
+- Unifica os rótulos de classe no aço transversal, memória, PDF, desenhos e CSV de detalhamento; memória/PDF e propriedades explicitam η1 e a pendência do CA-60. Sem alteração de γc/γs, critérios de biela ou dependências.
+
 - Torna γc e γs editáveis por peça em Cálculo e em Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada. Padrões 1,40/1,15 em arquivos antigos, sem mudança de esquema; histórico e salvamento preservam as escolhas. A troca de produção não muda os valores automaticamente.
 - Usa os coeficientes adotados em fcd, fyd, fctd, fywd e armadura mínima de flexão, preservando os tetos de 435 MPa. Registra adotados e referências na memória, PDF, cálculo auditável e notas de detalhamento com valores alterados.
 - Acrescenta pendência `review` para cada coeficiente abaixo do par informado na issue #2: pré-moldado/moldado no local 1,40/1,15; pré-fabricado 1,30/1,10. A redução é tratada como permissão da NBR 9062:2017 §8.1, sujeita à decisão do responsável técnico; o produto não certifica o enquadramento do elemento. Referências normativas não conferidas nesta contribuição. γf, γn, combinações e classes de aço permanecem iguais.

@@ -32,6 +32,22 @@ describe("Geometria em unidades canônicas", () => {
   });
 });
 describe("Arquivos e invalidação dos resultados", () => {
+  it("abre aço legado personalizado, preserva o número e mantém unsupported", () => {
+    const project = exampleProject();
+    project.pieces[0].materials.fyk = 420;
+    const opened = decodeProject(JSON.stringify(project));
+    expect(opened).toEqual(project);
+    expect(opened.schemaVersion).toBe(4);
+    const result = calculate(opened.pieces[0]);
+    expect(result.status).toBe("unsupported");
+    expect(result.reasons).toContain(
+      "O motor admite aço do tirante CA-25, CA-50 ou CA-60; informe fyk 250, 500 ou 600 MPa.",
+    );
+    expect(result.combinations).toEqual([]);
+    expect(decodeProject(JSON.stringify(opened)).pieces[0].materials.fyk).toBe(
+      420,
+    );
+  });
   it("abre projeto antigo com os coeficientes padrão sem mudar a versão", () => {
     const original = exampleProject();
     const legacy = JSON.parse(JSON.stringify(original));

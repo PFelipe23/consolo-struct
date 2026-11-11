@@ -4,6 +4,7 @@ import type { Piece, Project } from "../domain/model";
 import { ENGINE_VERSION, type CalculationResult } from "../domain/engine";
 import CalculationReport from "./CalculationReport";
 import BrandSignature from "./BrandSignature";
+import { steelBondDescription, steelLabel } from "../domain/steel";
 function MemoryPage({
   project,
   piece: p,
@@ -56,8 +57,11 @@ function MemoryPage({
         </h2>
         <p>
           Consolo simples · {p.geometry.width / 10} × {p.geometry.height / 10}{" "}
-          cm · fck {p.materials.fck} MPa · Quantidade: {p.quantity}
+          cm · fck {p.materials.fck} MPa · Tirante {steelLabel(p.materials.fyk)}{" "}
+          · Transversal {steelLabel(p.design.fykTransverse)} · Quantidade:{" "}
+          {p.quantity}
         </p>
+        <p className="table-note">{steelBondDescription(p.materials.fyk)}</p>
         <button className="button" onClick={calculate}>
           Calcular revisão atual
         </button>

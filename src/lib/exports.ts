@@ -12,6 +12,7 @@ import {
   type Piece,
   type Project,
 } from "../domain/model";
+import { steelBondDescription, steelLabel } from "../domain/steel";
 
 export function piecePoints(p: Piece): [number, number][] {
   const g = p.geometry;
@@ -297,6 +298,10 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   line(
     `fck=${p.materials.fck} MPa; fyk=${p.materials.fyk} MPa. N1=${p.rebar.tieCount} ramos phi ${p.rebar.tieDiameter}; N2=${p.rebar.stitchCount} estribos phi ${p.rebar.stitchDiameter}; N3=${p.rebar.stirrupCount} estribos phi ${p.rebar.stirrupDiameter}.`,
   );
+  line(
+    `Tirante: ${steelLabel(p.materials.fyk)}; transversal: ${steelLabel(p.design.fykTransverse)}.`,
+  );
+  line(steelBondDescription(p.materials.fyk));
   line(
     `Acoes principais: V=${num(p.loads.vertical)} N; H=${num(p.loads.horizontal)} N; gammaf=${p.loads.gamma}. Os parametros completos constam do apendice.`,
   );

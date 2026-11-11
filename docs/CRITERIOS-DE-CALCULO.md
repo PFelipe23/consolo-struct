@@ -39,7 +39,7 @@ A edição bibliográfica completa dos dois livros não foi inferida a partir de
 | Taxa mecânica máxima       | ω = 0,15 aparece no tratamento histórico                                                                 | Não apresentá-la como limite atual. No modelo de atrito, a demonstração de ductilidade permanece pendente de análise complementar |
 | Suspensão                  | O tratamento simplificado do livro pode atribuir parcela da reação ao mecanismo direto                   | Dimensionar para **100% da ação indireta**, conforme as normas fornecidas                                                         |
 | Barra soldada              | Regras de várias barras transversais e regra de barra única são diferentes                               | Barra única com mesmo diâmetro, geometria e qualificação específica; não usar a regra de 60% do tirante                           |
-| CA-60 / aderência          | Tabela 8.2 fornecida distingue CA-50 e CA-60                                                             | η1 = 2,25 para CA-50 e 1,00 para CA-25/CA-60; não transferir automaticamente valores de edições anteriores                        |
+| CA-60 / aderência          | A definição de η1 depende da superfície do fio/barra                                                     | Preservar η1 = 2,25 para CA-50 e 1,00 para CA-25/CA-60; CA-60 pendente de confirmação pelo responsável técnico, conforme issue #3 |
 
 ## Unidades e entradas
 
@@ -87,6 +87,26 @@ O peso próprio usa 25 kN/m³ e o volume do prisma trapezoidal. É concentrado e
 Cada combinação conserva seu par simultâneo V/H. O envelope é feito **separadamente para cada verificação**. A combinação que maximiza As do tirante não necessariamente governa contato, ancoragem ou outro requisito.
 
 ## Materiais
+
+### Classes de aço do tirante
+
+As classes e suas regras estão centralizadas em `src/domain/steel.ts`. O seletor **Modelo > Materiais > Classe de aço do tirante** oferece:
+
+| Classe | fyk (MPa) | η1 da aderência                    |
+| ------ | --------- | ---------------------------------- |
+| CA-25  | 250       | 1,00                               |
+| CA-50  | 500       | 2,25                               |
+| CA-60  | 600       | 1,00 — **pendente de confirmação** |
+
+Os valores de η1 são os existentes, preservados exatamente conforme a [issue #3](https://github.com/ricardocorsini/consolo-struct/issues/3). Para CA-60, o valor conservador 1,00 aguarda decisão do mantenedor/engenheiro responsável sobre a superfície do fio/barra; esta contribuição não resolve essa decisão nem afirma confirmação normativa. Não se transfere automaticamente η1 = 2,25 de CA-50 para CA-60. Referências para consulta: NBR 6118:2026 §§8.3 e 9.3.2.
+
+O mesmo módulo concentra os fatores de pino da alça, a exigência de gancho de CA-25 e os limites de aplicabilidade de dobramento de CA-60. As fórmulas e bitolas permanecem iguais. A resistência de cálculo continua usando o fyk numérico e os coeficientes dos materiais já adotados. O aço transversal conserva o esquema 500/600 MPa, apresentado pelos mesmos rótulos CA-50/CA-60.
+
+A classe é derivada da leitura de `materials.fyk`, que permanece **numérico** no arquivo; não se grava um novo campo nem se altera o esquema 4. Um valor legado como 420 MPa abre e permanece 420 MPa ao salvar. O seletor mostra **Personalizado (420 MPa), não suportado**, e o motor mantém a mensagem e o estado `unsupported`. A escolha de uma classe válida é explícita e participa de Desfazer/Refazer. Não há arredondamento ou enquadramento automático por faixa.
+
+Relatório, PDF, desenhos e quadro de aço usam os rótulos do módulo, sem inventar classes como CA-42 para valores personalizados. A prévia geométrica de mandris de valores legados mantém seu comportamento histórico, sem atribuir uma classe nem tornar o aço calculável. Essa compatibilidade de desenho não valida a ancoragem; o detalhamento continua sinalizando o cálculo fora do escopo.
+
+### Coeficientes dos materiais
 
 Combinação normal: padrões γc = 1,40 e γs = 1,15. Ambos são editáveis **por peça**, entre 1,0 e 2,0, em Cálculo ou em **Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada**. Projetos antigos recebem os padrões ao abrir, sem mudança de `schemaVersion` (4). Alterar o processo de produção não preenche nem reduz coeficientes automaticamente.
 
