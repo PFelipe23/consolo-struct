@@ -10,7 +10,7 @@ A cota geométrica a é o centro do aparelho. A posição de cálculo a_calc pod
 
 ## Alcance
 
-Este documento especifica o que o programa calcula e permite reproduzir suas decisões. O motor trata **consolo simples de concreto armado, seção retangular junto ao suporte, ações estáticas no plano médio e ELU de combinações normais**. Os dois caminhos são bielas e tirantes (curto) e atrito-cisalhamento (muito curto). A sugestão de armaduras é uma busca discreta, seguida das mesmas verificações usadas para o arranjo informado.
+Este documento especifica o que o programa calcula e permite reproduzir suas decisões. O motor trata **consolo simples de concreto armado, seção retangular junto ao suporte, ações estáticas no plano médio e ELU de combinações normais**. Os caminhos são bielas e tirantes (curto), atrito-cisalhamento (muito curto) e, para 1 < a/d ≤ 2, viga em balanço (flexão simples e cisalhamento). A sugestão de armaduras é uma busca discreta, seguida das mesmas verificações usadas para o arranjo informado.
 
 A implementação não equivale à aplicação integral de duas normas a um projeto. Cada resultado tem estado `pass`, `fail`, `review`, `invalid` ou `unsupported`. `pass` significa atendimento às verificações implementadas, sob as entradas e hipóteses registradas; não é aprovação executiva da peça ou da estrutura. Uma pendência `review` não é transformada em atendimento.
 
@@ -160,6 +160,48 @@ Complemento de El Debs: a área não fica abaixo da obtida pelo equilíbrio com 
 
 Para concretagem monolítica é possível selecionar explicitamente bielas, usando a extensão de Araújo para muito curtos: limitar tanθ a 1,4 e usar a altura efetiva correspondente. Esse caminho deve ser avaliado pelo projetista; não é usado para juntas de concretagem. Em casos muito altos, não se utiliza a dispensa de costura de §7.3.3.13.
 
+### Viga em balanço — 1 < a/d ≤ 2
+
+Com o modelo resistente **Automático por a/d**, a peça com `1 < a/d ≤ 2` é calculada como viga em balanço (classificação `cantilever`, método `beam`), em paridade com o GN Corbel. A fronteira `a/d = 1` continua no consolo curto e `a/d = 2` pertence à viga em balanço. Bielas e tirantes ou atrito-cisalhamento escolhidos explicitamente com `a/d > 1` são interrompidos com orientação para usar o modo automático; `a/d > 2` está fora do domínio. Unidades do núcleo (mm, N, MPa), sem arredondamento intermediário. `fy` é a tensão do tirante limitada a 435 MPa, como nas demais armaduras.
+
+Esforços: `Vsd = Vd`; `Msd = Vd a + Hd (h_ap + d′)`. O braço de H inclui a altura do apoio, como em `e = d′+h_ap`.
+
+Flexão simples com bloco retangular:
+
+`kmd = Msd/(b d² fcd)`; `radicando = αc²λ² − 2αcλ² kmd`.
+
+Se `radicando < 0` (equivalente a `kmd > αc/2`), a verificação **domínio da flexão** falha e As,flex fica **indeterminada**: o valor é omitido na memória e nas exportações, sem número sentinela, e a armadura necessária do tirante, a costura e a ancoragem que dela dependem também ficam indeterminadas. Caso contrário:
+
+`kx = (αcλ − √radicando)/(αcλ²)`; `kz = 1 − λkx/2`; `As,flex = Msd/(kz d fy)`; `As,h = Hd/fy`; `Asmodelo = As,flex + As,h`.
+
+`As,req = max(Asmodelo; mínimo de flexão; 0,04 fck/fyk · b d)`, sem os termos de El Debs, que são do consolo curto.
+
+Cisalhamento pelo Modelo I, desconsiderando a parcela do concreto (`Vc = 0`) nesta faixa de a/d:
+
+- `VRd2 = 0,27 αv2 fcd b d` e `Vsd ≤ VRd2`. Aumentar estribos não resolve essa verificação; a sugestão de armaduras não a contorna.
+- `(asw/s)nec = Vsd/(0,9 d fywd)`, com `fywd = min(fywk/γs; 435)`; `(asw/s)mín = 0,2 (fctm/fywk) b`; adota-se o maior.
+- `Atransv,nec = max((asw/s) L; 0,0015 b h)`, comparada com N3 (estribos fechados, dois ramos) ao longo do comprimento L do consolo.
+- `smáx = min(0,6d; 300 mm)` se `Vsd ≤ 0,67 VRd2`; senão `smáx = min(0,3d; 200 mm)`. Compara-se o passo real de N3, o mesmo calculado pelo detalhamento (`stirrupLayout`); com um único estribo, compara-se L.
+
+Armadura de face, conforme a altura h junto ao suporte:
+
+- `h ≤ 600 mm`: costura por analogia ao consolo curto, `(As/s)cost = max(0,4 As,req/d; 0,0015 b)` e `Acost,nec = (As/s)cost · 2d/3`. Não se usam os termos de área total do consolo curto (0,4 As,ef e literatura) nem a faixa mínima do terço inferior. A oferta são os ramos de N2 cujos eixos desenhados ficam na faixa 2d/3; mantêm-se as regras de disposição da costura.
+- `h > 600 mm`: não há costura. A armadura de pele necessária é `As,pele = 0,001 b h` **por face**. Como o programa não tem entrada nem detalhamento de pele, a verificação fica sempre em **conferir**, com a área por face e total; o dimensionamento e o detalhamento da pele são do projetista.
+
+Continuam valendo tirante, taxa mecânica mínima, mínimo de flexão, compressão sob o apoio, ancoragem, geometria e disposições construtivas, cobrimento, alça ou solda, armadura local do suporte, fendilhamento e suspensão. Não são geradas as verificações de bielas e tirantes (biela, inclinação, nó, escoamento prévio), nem os valores desse modelo. Os complementos de El Debs não se aplicam e uma nota da memória registra isso; mantém-se apenas o piso de força de entrada `Hd ≥ 0,20 Vd`, quando ativado, por ser uma regra das ações e não do modelo do consolo curto.
+
+O modelo **não cobre**: `a/d > 2`; bielas e tirantes além de `a/d = 1`; ELS, fissuração e flecha da viga em balanço; fadiga; torção; dimensionamento e detalhamento da armadura de pele além do aviso; consolos duplos; verificações de ductilidade `x/d`, armadura máxima e rotação plástica (tratadas na issue de ductilidade).
+
+Referências **citadas no GN Corbel e ainda não conferidas** nos textos da ABNT: NBR 6118 §14.6.4.3, §17.2, §17.3.5.2.3, §17.4.2.2 e §18.3.3.2; NBR 9062:2017 §7.3.6 e §7.3.7.2. A conferência, assim como as decisões abaixo, cabe ao mantenedor e ao responsável técnico:
+
+- `Vc = 0` para `a/d > 1`; Msd com `h_ap` no braço de Hd (composição conservadora).
+- Pele de 0,10 % b h por face acima de 600 mm; costura abaixo de 600 mm com k = 0,4 sobre a armadura necessária do tirante.
+- Manutenção do piso `H ≥ 0,20 V` de El Debs nesta faixa.
+- `fy` limitado a 435 MPa na flexão; o GN Corbel usa `fyd` sem teto, o que só difere para CA-60.
+- Junta de concretagem não monolítica com `a/d > 0,5` em modo automático continua interrompida.
+
+Os casos de referência A, B e C da issue #6 foram reproduzidos executando o motor, com diferença relativa máxima de 4,3×10⁻⁵ (arredondamento dos valores manuais), e estão fixados em `tests/engine.test.ts`.
+
 ### Armadura mínima
 
 A área necessária é o maior entre o modelo, o mínimo de flexão e o mínimo mecânico da 9062.
@@ -222,7 +264,7 @@ Isso não verifica relação água/cimento, execução, tolerâncias, idade de c
 
 ## Domínio interrompido e verificações externas
 
-São interrompidos: a/d>1, força vertical nula ou ascendente, geometria inválida, número não finito, força/excentricidade transversal, fadiga declarada, contato parcial, atrito para curto, junta não monolítica no modelo bielas, aço fora das classes modeladas e H não justificado em apoio impedido. O tipo `unsupported` não contém números de dimensionamento aparentes.
+São interrompidos: a/d>2, bielas e tirantes ou atrito escolhidos explicitamente com a/d>1, força vertical nula ou ascendente, geometria inválida, número não finito, força/excentricidade transversal, fadiga declarada, contato parcial, atrito para curto, junta não monolítica no modelo bielas, aço fora das classes modeladas e H não justificado em apoio impedido. O tipo `unsupported` não contém números de dimensionamento aparentes.
 
 Permanecem externos: ELS e fissuração; dentes Gerber; consolos duplos, contínuos e espaciais; ciclos, impacto e sismo; pilar/painel/viga-suporte completos; projeto do aparelho de apoio; pinos/chumbadores; ensaios e metalurgia das soldas; geometria completa de ancoragem com gancho; detalhamento, comprimentos de corte e interferências das armaduras. Não se devem completar esses itens por simples troca de rótulo ou “aceitar aviso”.
 
