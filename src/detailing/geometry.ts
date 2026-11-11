@@ -1,3 +1,4 @@
+import { geometricPinFactor } from "../domain/steel";
 // Bar centre lines are stored in millimetres. Drawings convert to centimetres.
 export type Point = { x: number; y: number };
 export type Segment =
@@ -137,17 +138,7 @@ export function mandrelDiameter(
   stirrup = false,
 ) {
   if (stirrup && diameter <= 10) return 3 * diameter;
-  const factor =
-    fyk <= 250
-      ? diameter < 20
-        ? 4
-        : 5
-      : fyk <= 500
-        ? diameter < 20
-          ? 5
-          : 8
-        : 6;
-  return factor * diameter;
+  return geometricPinFactor(fyk, diameter) * diameter;
 }
 export const steelMass = (length: number, diameter: number) =>
   ((length * Math.PI * diameter ** 2) / 4) * 7.85e-6;
