@@ -2,6 +2,12 @@
 
 Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pressupõe que existam tags, releases publicadas ou instaladores para cada versão.
 
+## Não lançado
+
+- Adiciona a aba superior Configurações ao ribbon, com grupos Geral / Aparência, Desenho, Modelo 3D, Dimensionamento e Detalhamento, navegação por teclado e rolagem horizontal em janelas estreitas.
+- Reutiliza tema, cotas, armaduras, cargas e grade, preservando os acessos anteriores, seus estados e as regras atuais de persistência. O atalho Critérios da peça selecionada continua acessando dados da peça.
+- Identifica preferências futuras como Em breve, em itens desabilitados com texto visível. Abrir a central não altera documentos, dados, resultados nem histórico; não há mudanças no motor ou no formato de arquivos.
+
 ## 0.7.1
 
 - Corrige o rótulo antigo do motor na barra de status: a interface passa a usar a versão real do núcleo de cálculo.

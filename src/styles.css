@@ -446,12 +446,15 @@ h4 {
 .ribbon-tabs {
   display: flex;
   align-items: center;
-  height: 31px;
+  min-height: 31px;
   border-bottom: 1px solid var(--border);
   gap: 1px;
   padding-left: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 .ribbon-tabs > button {
+  flex-shrink: 0;
   height: 31px;
   padding: 0 17px;
   border-bottom: 2px solid transparent;
@@ -540,7 +543,40 @@ h4 {
   margin-top: 5px;
   line-height: 14px;
 }
+.ribbon-panel.settings-panel {
+  height: 128px;
+}
+.settings-panel .ribbon-tools {
+  grid-template-rows: repeat(3, 24px);
+  gap: 2px 4px;
+}
+.ribbon-group-description {
+  margin: 0 6px 5px;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--muted);
+}
+.ribbon-tool.ribbon-future:disabled {
+  opacity: 1;
+  color: var(--muted);
+  cursor: default;
+}
+.ribbon-tool.ribbon-future:hover {
+  background: none;
+  border-color: transparent;
+}
+.ribbon-future svg {
+  color: var(--muted);
+}
+.ribbon-future-status {
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--hover);
+  font-size: 10px;
+}
 .desktop-body {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -1906,9 +1942,9 @@ kbd {
 }
 @media (max-width: 850px) {
   .project-browser {
-    position: fixed;
-    top: 160px;
-    bottom: 25px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
     left: 0;
     display: flex;
     z-index: 6;
@@ -1941,9 +1977,9 @@ kbd {
     display: none;
   }
   .property-dock {
-    position: fixed;
-    top: 155px;
-    bottom: 25px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
     right: 0;
     display: block;
     width: min(280px, 90vw) !important;
