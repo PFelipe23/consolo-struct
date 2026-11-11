@@ -39,6 +39,10 @@ Selecione o consolo e revise geometria, materiais, cargas, armaduras e a aba **C
 - Alterar bitolas, camadas, estribos ou cobrimento pode modificar a altura útil e o modelo resistente.
 - As combinações são fornecidas pelo projetista; não há geração automática segundo NBR 8681.
 
+Em **Modelo > Materiais**, selecione a **Classe de aço do tirante**: CA-25 · 250 MPa, CA-50 · 500 MPa ou CA-60 · 600 MPa. O campo mostra também η1 da aderência (1,00 / 2,25 / 1,00). Para CA-60, o valor atual permanece pendente de confirmação do responsável técnico quanto à superfície do fio/barra.
+
+Um projeto antigo com outro fyk, como 420 MPa, mostra **Personalizado (420 MPa), não suportado** e preserva esse número ao abrir e salvar. O cálculo permanece fora do domínio até uma escolha válida explícita; não se converte o valor automaticamente. As escolhas afetam somente a peça selecionada, entram em Desfazer/Refazer e são guardadas com **Salvar projeto**, mantendo fyk numérico. Nas propriedades **Cálculo > Durabilidade e disposição**, o aço da costura e estribos continua limitado a CA-50/CA-60. Consulte [os critérios e a pendência técnica](CRITERIOS-DE-CALCULO.md#classes-de-aço-do-tirante) e [a validação da contribuição](VALIDACAO-CLASSES-ACO.md).
+
 ## 3. Calcular e ler a memória
 
 Clique em **Calcular** e consulte **Memória**. Expanda combinações e verificações para examinar fórmulas, resultados e referências. Alterações nas entradas invalidam o resultado anterior; recalcule antes de interpretar a peça.

@@ -2,6 +2,12 @@ import { calculate, tieLayout, type CalculationResult } from "../domain/engine";
 import { geometryErrors, type Piece } from "../domain/model";
 import { stirrupLayout, upperStitchLayout } from "../domain/theory";
 import {
+  loopPinDefined,
+  requiresSupportHook,
+  steelClassOf,
+  stirrupMandrelDefined,
+} from "../domain/steel";
+import {
   closedStirrup,
   mandrelDiameter,
   roundedPath,
@@ -126,7 +132,8 @@ export function buildDetail(piece: Piece): Detail {
       });
   };
   const mainD = mandrelDiameter(r.tieDiameter, p.materials.fyk);
-  if (p.materials.fyk === 250)
+  const steel = steelClassOf(p.materials.fyk);
+  if (requiresSupportHook(steel))
     issue(
       "smooth-detail",
       "Barras lisas CA-25 exigem ancoragem com gancho semicircular. A forma completa desse gancho não está implementada no gerador; detalhar especificamente antes da execução.",
@@ -168,7 +175,7 @@ export function buildDetail(piece: Piece): Detail {
         "O gancho do tirante não cabe no trecho de suporte representado; reveja projeção, ponta e altura.",
       );
   }
-  if (p.materials.fyk === 600 && r.tieDiameter >= 20)
+  if (!loopPinDefined(steel, r.tieDiameter))
     issue(
       "main-grade",
       "A tabela de mandris não define este diâmetro de CA-60 para a ancoragem adotada.",
@@ -318,8 +325,8 @@ export function buildDetail(piece: Piece): Detail {
   const bottomAt = (x: number, offset: number) =>
     g.height - slope * x - offset * Math.sqrt(1 + slope ** 2);
   if (
-    q.fykTransverse === 600 &&
-    (r.stitchDiameter > 10 || r.stirrupDiameter > 10)
+    !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stitchDiameter) ||
+    !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stirrupDiameter)
   )
     issue(
       "transverse-mandrel",

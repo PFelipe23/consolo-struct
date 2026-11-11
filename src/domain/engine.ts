@@ -23,6 +23,13 @@ import {
   materialSafety,
   materialSafetyReference,
 } from "./materialSafety";
+import {
+  bondCoefficientEta1,
+  loopPinDefined,
+  loopPinFactor,
+  requiresSupportHook,
+  steelClassOf,
+} from "./steel";
 
 export const ENGINE_VERSION = "0.4.0";
 export const POLICY = "LC-ELU-2026.2";
@@ -433,6 +440,8 @@ function calculateCase(
           : "beam"
       : q.method;
   const isBeam = method === "beam";
+  // calculate() rejects unknown numeric steels before entering this case.
+  const steel = steelClassOf(p.materials.fyk)!;
   const safety = materialSafety(q);
   const coefficientValues = {
     gammaC: safety.gammaC,
@@ -605,7 +614,7 @@ function calculateCase(
     lateralMargin > g.cover ? 0.3 * vertical * (1 - q.bearingWidth / b) : 0;
   const splittingRequired = splittingForce / m.fywd;
   const splittingProvided = 2 * area(q.splittingCount, q.splittingDiameter);
-  const eta1 = p.materials.fyk === 500 ? 2.25 : 1;
+  const eta1 = bondCoefficientEta1(steel);
   const fbd =
     eta1 *
     (q.bond === "good" ? 1 : 0.7) *
@@ -631,16 +640,6 @@ function calculateCase(
     r.tieDiameter,
     q.aggregate / 1.2,
   );
-  const loopPinFactor =
-    p.materials.fyk === 250
-      ? r.tieDiameter < 20
-        ? 4
-        : 5
-      : p.materials.fyk === 500
-        ? r.tieDiameter < 20
-          ? 5
-          : 8
-        : 6;
   // Beam branch (1 < a/d ≤ 2): face reinforcement depends on h; N3 pitch is the drawn pitch.
   const beamStitchApplies = g.height <= 600;
   const beamStitchRate = Math.max((0.4 * tieRequired) / d, 0.0015 * b);
@@ -1248,7 +1247,7 @@ function calculateCase(
         "Compatibilidade geométrica; NBR 6118 §9.4",
       ),
     );
-    if (p.materials.fyk === 250)
+    if (requiresSupportHook(steel))
       add(
         note(
           "smoothHook",
@@ -1272,7 +1271,7 @@ function calculateCase(
       check(
         "loopPin",
         "Diâmetro interno da alça horizontal",
-        loopPinFactor * r.tieDiameter,
+        loopPinFactor(steel, r.tieDiameter) * r.tieDiameter,
         q.loopInternalDiameter,
         "mm",
         "D ≥ kφ (tabela 9.1)",
@@ -1300,7 +1299,7 @@ function calculateCase(
           "fail",
         ),
       );
-    if (p.materials.fyk === 600 && r.tieDiameter >= 20)
+    if (!loopPinDefined(steel, r.tieDiameter))
       add(
         note(
           "loopSteel",
@@ -1673,7 +1672,7 @@ export function calculate(p: Piece): CalculationResult {
     unsupported.push(
       "Consolo curto com junta de concretagem requer modelo adicional da interface; adote análise específica.",
     );
-  if (![250, 500, 600].includes(p.materials.fyk))
+  if (!steelClassOf(p.materials.fyk))
     unsupported.push(
       "O motor admite aço do tirante CA-25, CA-50 ou CA-60; informe fyk 250, 500 ou 600 MPa.",
     );
