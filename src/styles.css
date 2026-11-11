@@ -2688,3 +2688,35 @@ kbd {
   margin-bottom: 15px;
   color: var(--text);
 }
+.steel-positive {
+  stroke: var(--steel1);
+  opacity: 0.8;
+}
+.bar-arrangement-control {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.bar-arrangement-control p {
+  margin: 8px 0;
+}
+.arrangement-options {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.arrangement-options label {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.arrangement-options label:has(input:disabled) {
+  color: var(--muted);
+}

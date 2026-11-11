@@ -19,6 +19,8 @@ import {
   steelMass,
   type BarPath,
 } from "./geometry";
+import { beamArrangementActive, beamLayout } from "./beam";
+import type { BarArrangement } from "./settings";
 
 export type DetailIssue = {
   code: string;
@@ -34,7 +36,8 @@ export type Bar = {
     | "stirrup"
     | "mounting"
     | "pin"
-    | "welded";
+    | "welded"
+    | "positive";
   description: string;
   diameter: number;
   grade: number;
@@ -57,6 +60,7 @@ export type Detail = {
   result: CalculationResult;
   mass: number;
   totalMass: number;
+  arrangement: BarArrangement;
   tieRows: ReturnType<typeof tieLayout>["rows"];
   steelSummary: {
     grade: number;
@@ -67,6 +71,11 @@ export type Detail = {
   }[];
 };
 const rounded = (n: number) => Math.round(n * 1000) / 1000;
+const cm = (mm: number) =>
+  (mm / 10).toLocaleString("pt-BR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 export function pinCenters(p: Piece): number[] {
   const s = p.detailing;
   const pitch =
@@ -136,6 +145,15 @@ export function buildDetail(piece: Piece): Detail {
         cutLength: Math.ceil(exactLength - 1e-7),
       });
   };
+  const result = calculate(p);
+  const beam = beamArrangementActive(p);
+  const beamBars = beam ? beamLayout(p, result.values) : null;
+  if (s.barArrangement === "beam" && !beam)
+    issue(
+      "beam-unavailable",
+      "O detalhamento “Armado como viga” só se aplica quando o concreto excedente é mantido. Com o recorte, a peça foi detalhada no modo de consolo atual.",
+      "review",
+    );
   const mainD = mandrelDiameter(r.tieDiameter, p.materials.fyk);
   const steel = steelClassOf(p.materials.fyk);
   if (requiresSupportHook(steel))
@@ -150,16 +168,17 @@ export function buildDetail(piece: Piece): Detail {
       ? s.supportHookProjection
       : q.supportAnchorLength;
   if (
+    !beam &&
     back >
-    g.columnWidth -
-      g.cover -
-      (q.supportAnchor === "hook" ? r.tieDiameter / 2 : 0)
+      g.columnWidth -
+        g.cover -
+        (q.supportAnchor === "hook" ? r.tieDiameter / 2 : 0)
   )
     issue(
       "tie-back",
       "O tirante ultrapassa o cobrimento na face posterior do suporte.",
     );
-  if (q.supportAnchor === "hook") {
+  if (!beam && q.supportAnchor === "hook") {
     if (s.supportHookTail < 8 * r.tieDiameter)
       issue(
         "hook-tail",
@@ -188,6 +207,35 @@ export function buildDetail(piece: Piece): Detail {
   layout.rows
     .filter((row) => row.count)
     .forEach((row, layer) => {
+      const beamTop = beamBars?.top[layer];
+      if (beamTop) {
+        const { back: b, front: f } = beamTop;
+        if (!b.fits || !f.fits)
+          issue(
+            "beam-top-anchor",
+            `As dobras do tirante não alcançam a ancoragem necessária (lb,nec = ${cm(beamBars!.lbNecTop)} cm) dentro do contorno com o cobrimento informado. Reveja altura, bitola ou o comprimento do suporte.`,
+          );
+        add({
+          family: "tie",
+          description: "Tirante (negativa) dobrado",
+          diameter: r.tieDiameter,
+          grade: p.materials.fyk,
+          quantity: row.count,
+          path: beamTop.path,
+          mandrel: beamTop.mandrel,
+          width: 0,
+          height: beamTop.span,
+          hookTail: 0,
+          hookExtra: 0,
+          note: `Camada ${layer + 1}; armado como viga: dobras de 90° no suporte (${cm(b.leg)} cm) e na ponta (${cm(f.leg)} cm)`,
+          locations: Array.from({ length: row.count }, (_, i) => ({
+            x: i,
+            z: row.y,
+            layer,
+          })),
+        });
+        return;
+      }
       if (q.frontAnchor === "loop") {
         if (row.count % 2)
           issue(
@@ -467,7 +515,51 @@ export function buildDetail(piece: Piece): Detail {
       "stirrup-spacing",
       "Há congestionamento de estribos verticais; reveja a quantidade e o agregado.",
     );
-  if (s.mounting) {
+  if (beamBars) {
+    const bottom = beamBars.bottom;
+    if (!loopPinDefined(steel, bottom.diameter))
+      issue(
+        "beam-bottom-mandrel",
+        "O pino de dobramento da positiva CA-60 com bitola ≥ 20 mm não está definido na tabela 9.1. A forma mostrada é esquemática; detalhar especificamente antes da execução.",
+      );
+    const edge = g.cover + r.stirrupDiameter + bottom.diameter / 2;
+    const gap = (g.width - 2 * edge) / (bottom.count - 1) - bottom.diameter;
+    if (gap < Math.max(20, bottom.diameter, 1.2 * q.aggregate))
+      issue(
+        "beam-bottom-spacing",
+        "As barras da armadura positiva não cabem na largura com o espaçamento livre mínimo. Reveja a quantidade, a bitola ou a largura da peça.",
+      );
+    if (!bottom.back.fits || !bottom.front.fits)
+      issue(
+        "beam-bottom-anchor",
+        `As dobras da armadura positiva não alcançam a ancoragem de referência (lb,nec = ${cm(beamBars.lbNecBottom)} cm) sem interferir no tirante. Reveja a bitola da positiva ou a altura da peça.`,
+        "review",
+      );
+    add({
+      family: "positive",
+      description: "Armadura positiva dobrada",
+      diameter: bottom.diameter,
+      grade: p.materials.fyk,
+      quantity: bottom.count,
+      path: bottom.path,
+      mandrel: bottom.mandrel,
+      width: 0,
+      height: bottom.span,
+      hookTail: 0,
+      hookExtra: 0,
+      note: `Armado como viga: dobras de 90° no suporte (${cm(bottom.back.leg)} cm) e na ponta (${cm(bottom.front.leg)} cm); não computada como armadura resistente`,
+      locations: [
+        { x: 0, z: bottom.depthSupport },
+        { x: bottom.vertices.at(-1)!.x, z: bottom.depthTip },
+      ],
+    });
+    issue(
+      "beam-review",
+      "Armado como viga: a ancoragem do tirante na ponta é feita por dobra, e não por alça ou barra transversal soldada (NBR 9062 §7.3.3.6–7). O cálculo por bielas e tirantes não muda, e a armadura positiva não entra como armadura resistente. Conferir a adequação do modo à peça e as interferências das dobras.",
+      "review",
+    );
+  }
+  if (s.mounting && !beam) {
     const end = g.length - g.cover - s.mountingDiameter / 2;
     const off = g.cover + r.stirrupDiameter + s.mountingDiameter / 2;
     const nominalRadius =
@@ -580,7 +672,7 @@ export function buildDetail(piece: Piece): Detail {
       );
     for (const b of bars.filter((b) => b.family === "tie")) {
       const positions =
-        q.frontAnchor === "loop"
+        q.frontAnchor === "loop" && !beam
           ? [(g.width - b.width) / 2, (g.width + b.width) / 2]
           : Array.from(
               { length: b.quantity },
@@ -625,7 +717,6 @@ export function buildDetail(piece: Piece): Detail {
       "A armadura de fendilhamento ou suspensão informada no cálculo requer definição própria de forma e ancoragem; não foi incluída no quadro. Detalhe este reforço antes da execução.",
     );
   bars.forEach((b, i) => (b.mark = `N${i + 1}`));
-  const result = calculate(p);
   if (result.status !== "pass")
     issue(
       "calculation",
@@ -671,6 +762,7 @@ export function buildDetail(piece: Piece): Detail {
     result,
     mass,
     totalMass: mass * p.quantity,
+    arrangement: beam ? "beam" : "consolo",
     tieRows: layout.rows,
     steelSummary: steelSummary.sort(
       (a, b) => a.grade - b.grade || a.diameter - b.diameter,

@@ -32,6 +32,7 @@ import {
   ZoomIn,
   ZoomOut,
   Plus,
+  RectangleHorizontal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -246,6 +247,11 @@ export const ribbonCommands = {
     Scissors,
     "Manter a geometria original ou remover o concreto dispensável abaixo da biela da peça selecionada",
   ),
+  barArrangement: command(
+    "Armado como viga",
+    RectangleHorizontal,
+    "Detalhar o tirante e a armadura positiva da peça selecionada como numa viga, com dobras nas duas extremidades; exige manter o concreto excedente",
+  ),
 };
 export type Action = keyof typeof ribbonCommands;
 export const ribbonTabs = [
@@ -432,8 +438,9 @@ export const ribbonGroups: Record<RibbonTab, Group[]> = {
     {
       id: "detailing",
       label: "Detalhamento",
-      description: "Apresentação · itens futuros",
+      description: "Modo das armaduras · itens futuros",
       tools: [
+        tool("barArrangement"),
         future("detailing-display", "Padrões de apresentação", Layers3),
         future("detailing-text", "Textos", Type),
         future("detailing-dimensions", "Cotas do detalhamento", Ruler),

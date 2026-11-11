@@ -58,7 +58,7 @@ test.beforeEach(async ({ page }) => {
 test("composição, painel associado, foco e navegação por mouse e teclado", async ({
   page,
 }) => {
-  const counts = [5, 8, 11, 15, 7, 20];
+  const counts = [5, 8, 11, 15, 7, 21];
   for (const [i, name] of tabs.entries()) {
     await tab(page, name).click();
     await expect(tab(page, name)).toHaveAttribute("aria-selected", "true");

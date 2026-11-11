@@ -43,6 +43,8 @@ import StrutLimitControl from "./components/StrutLimitControl";
 import MaterialSafetyControl from "./components/MaterialSafetyControl";
 import ExcessConcreteControl from "./components/ExcessConcreteControl";
 import { pieceVolume } from "./domain/profile";
+import BarArrangementControl from "./components/BarArrangementControl";
+import { beamArrangementActive } from "./detailing/beam";
 import PanelResizer from "./components/PanelResizer";
 import Inspector from "./components/Inspector";
 import ProjectBrowser from "./components/ProjectBrowser";
@@ -106,6 +108,7 @@ type Modal =
   | "strutLimit"
   | "materialSafety"
   | "excessConcrete"
+  | "barArrangement"
   | null;
 type History = { past: Project[]; present: Project; future: Project[] };
 
@@ -538,6 +541,9 @@ export default function App() {
       case "strutLimit":
         setModal("strutLimit");
         break;
+      case "barArrangement":
+        setModal("barArrangement");
+        break;
       case "materialSafety":
         setModal("materialSafety");
         break;
@@ -754,6 +760,7 @@ export default function App() {
           browser: sidebar,
           properties,
           checks: expanded,
+          barArrangement: beamArrangementActive(p),
         }}
       />
       <div className="desktop-body">
@@ -1161,20 +1168,23 @@ export default function App() {
                   ? "Coeficientes dos materiais da peça selecionada"
                   : modal === "excessConcrete"
                     ? "Concreto excedente da peça selecionada"
-                    : modal === "project" || modal === "newProject"
-                      ? "Dados do projeto"
-                      : modal === "piece"
-                        ? "Identificação da peça"
-                        : modal === "export"
-                          ? "Exportar projeto"
-                          : modal === "delete"
-                            ? "Excluir este consolo?"
-                            : "Conheça o ConsoloStruct"}
+                    : modal === "barArrangement"
+                      ? "Detalhamento das armaduras da peça selecionada"
+                      : modal === "project" || modal === "newProject"
+                        ? "Dados do projeto"
+                        : modal === "piece"
+                          ? "Identificação da peça"
+                          : modal === "export"
+                            ? "Exportar projeto"
+                            : modal === "delete"
+                              ? "Excluir este consolo?"
+                              : "Conheça o ConsoloStruct"}
             </Dialog.Title>
             <Dialog.Description>
               {modal === "strutLimit" ||
               modal === "materialSafety" ||
-              modal === "excessConcrete"
+              modal === "excessConcrete" ||
+              modal === "barArrangement"
                 ? `Peça ${p.name} · ${p.description}. As alterações entram em Desfazer/Refazer. Use Salvar projeto para guardar os valores no arquivo.`
                 : modal === "export"
                   ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
@@ -1391,6 +1401,27 @@ export default function App() {
                 <p>
                   A geometria é atualizada em todas as vistas. Use Calcular para
                   conferir a nova revisão.
+                </p>
+                <div className="modal-actions">
+                  <Dialog.Close className="button">Concluir</Dialog.Close>
+                </div>
+              </>
+            )}
+            {modal === "barArrangement" && (
+              <>
+                <BarArrangementControl
+                  piece={p}
+                  onChange={(patch) =>
+                    updatePiece({
+                      ...p,
+                      detailing: { ...p.detailing, ...patch },
+                    })
+                  }
+                />
+                <p>
+                  O modo afeta somente o detalhamento da peça selecionada: os
+                  desenhos, o modelo 3D e o quadro de aço. O resultado do
+                  cálculo continua válido.
                 </p>
                 <div className="modal-actions">
                   <Dialog.Close className="button">Concluir</Dialog.Close>
