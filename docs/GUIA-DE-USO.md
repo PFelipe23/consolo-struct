@@ -60,6 +60,8 @@ Para experimentar uma falha conhecida, no exemplo Curto-ELU reduza a ancoragem d
 
 Na **Seção A–A** da modelagem, a cota **d’**, à esquerda, indica a distância do topo ao centroide de todas as barras do tirante, em centímetros com uma casa decimal. Com uma camada, termina no eixo das barras; com várias, usa o centroide ponderado pelas quantidades de cada camada, que pode ficar entre elas. O valor acompanha as entradas e o controle **Mostrar cotas**, mesmo com as armaduras ocultas. É uma cota de consulta, sem edição pelo desenho; as cotas **b** e **h** continuam editáveis.
 
+Consulte as [imagens e verificações da cota d’](VALIDACAO-SECAO-AA-DPRIME.md).
+
 A vista 3D e suas armaduras são representações esquemáticas, não análise resistente espacial nem detalhamento executivo. As setas mostram ações de entrada da combinação Principal, sem escala de intensidade. A câmera não altera os dados de cálculo.
 
 ### Configurações
