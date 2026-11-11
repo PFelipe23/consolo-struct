@@ -2065,6 +2065,28 @@ kbd {
   border-bottom: 1px solid var(--border);
   padding: 10px 0;
 }
+.strut-limit-control {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.strut-limit-control select {
+  width: 100%;
+}
+.strut-limit-control p {
+  margin: 8px 0;
+}
+.strut-limit-control small {
+  color: var(--muted);
+}
+.strut-limit-warning {
+  padding-left: 8px;
+  border-left: 3px solid var(--accent);
+}
 .design-panel summary {
   cursor: pointer;
   font-weight: 600;

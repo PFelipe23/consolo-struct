@@ -25,7 +25,7 @@ O tema fica em **Configurações > Geral / Aparência**, além do acesso rápido
 
 Use **Novo projeto** e confirme nome, cliente e responsável em Dados do projeto. Cancelar mantém o projeto anterior. Use **Abrir** para carregar um projeto; o exemplo `examples/casos-validacao.lume.json` permite explorar o motor, e `examples/detalhamento/consolos-detalhados.lume.json` demonstra tirantes simples e duplos.
 
-Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 3. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
+Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 4. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
 
 ## 2. Conferir entradas
 
@@ -64,19 +64,33 @@ A vista 3D e suas armaduras são representações esquemáticas, não análise r
 
 A aba superior **Configurações**, após **Documentação**, centraliza os acessos abaixo. Ela pertence à faixa de ferramentas (ribbon), independentemente das abas de documentos. Abri-la preserva o documento ativo, a peça selecionada, os resultados e o histórico de desfazer/refazer.
 
-| Grupo             | Disponível agora                                                                                           | Em breve (itens desabilitados)                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência do acesso na barra superior                           | Preferências gerais                                              |
-| Desenho           | **Mostrar cotas**, **Mostrar armaduras**, **Mostrar cargas** e **Mostrar grade**, sincronizados com Exibir | Cores, espessuras e estilo de cotas                              |
-| Modelo 3D         | —                                                                                                          | Preferências de visualização e câmera padrão                     |
-| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades                               | Padrões gerais de dimensionamento                                |
-| Detalhamento      | —                                                                                                          | Padrões de apresentação, textos, cotas e identificação de barras |
+| Grupo             | Disponível agora                                                                                                        | Em breve (itens desabilitados)                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência do acesso na barra superior                                        | Preferências gerais                                              |
+| Desenho           | **Mostrar cotas**, **Mostrar armaduras**, **Mostrar cargas** e **Mostrar grade**, sincronizados com Exibir              | Cores, espessuras e estilo de cotas                              |
+| Modelo 3D         | —                                                                                                                       | Preferências de visualização e câmera padrão                     |
+| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades, e **Limite da biela da peça selecionada** | Padrões gerais de dimensionamento                                |
+| Detalhamento      | —                                                                                                                       | Padrões de apresentação, textos, cotas e identificação de barras |
 
 O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os efeitos e limites atuais de cada vista, sem nova persistência; elas não configuram o desenho de detalhamento. O atalho de critérios abre os **dados da peça selecionada**, não preferências globais. Os comandos de edição ficam em Modelo e as alternâncias de desenho também continuam em Exibir; Início mantém os oito atalhos do fluxo principal.
 
 Itens **Em breve** são informativos, não executam ações nem salvam configurações. Não há formulário de preferências futuras nem botão Salvar/Aplicar. Nenhum critério ou resultado de engenharia é alterado por abrir esta aba.
 
 Capturas da aba: [tema claro](images/configuracoes-claro.png) e [tema escuro](images/configuracoes-escuro.png).
+
+#### Configurar o limite da biela
+
+Em **Configurações > Dimensionamento > Limite da biela da peça selecionada**, confira o nome da peça e escolha o critério. O mesmo seletor está em **Modelo > Critérios da peça selecionada > Modelo e ações**, nas propriedades.
+
+- **Padrão conservador · fcd2** mantém o comportamento anterior. É o padrão de novas peças e de arquivos sem o campo.
+- **fcd3**, **0,85·fcd (carga indireta)** e **fcd (carga direta)** são alternativas menos conservadoras. As opções incompatíveis com a introdução da carga ficam desabilitadas.
+- O controle mostra o limite escolhido e o padrão em MPa. O critério vale somente para a biela no modelo de bielas e tirantes, sem mudar nós, apoio, escoamento prévio, inclinação, complemento de El Debs, atrito-cisalhamento ou viga em balanço.
+
+A escolha altera imediatamente **somente a peça selecionada** e entra em Desfazer/Refazer. Não muda padrões globais nem outras peças. **Concluir** ou `Esc` fecha a janela; não desfaz uma escolha já feita. Abrir e fechar sem escolher não altera o projeto. Depois de alterar, use **Calcular** para gerar a nova revisão e **Salvar projeto** para guardar a escolha no arquivo.
+
+Alternativas aplicadas à biela geram a pendência **Conferir**, com os limites escolhido e padrão na memória, PDF e cálculo auditável. Elas não aprovam o projeto por si só. Se mudar a introdução da carga e o critério atual se tornar incompatível, escolha uma opção válida; o programa não troca o critério silenciosamente. Consulte a [tabela de limites e o alcance das referências](CRITERIOS-DE-CALCULO.md#critério-selecionável-do-limite-da-biela).
+
+Capturas do controle: [tema claro](images/limite-biela-claro.png), [tema escuro](images/limite-biela-escuro.png) e [janela estreita](images/limite-biela-janela-estreita.png). Os [resultados de validação da contribuição](VALIDACAO-LIMITE-BIELA.md) registram o baseline e os limites dos testes.
 
 Na lista de abas do ribbon, use as setas esquerda/direita, `Home` e `End` para navegar, e `Tab` para alcançar os controles. O estado dos controles funcionais é indicado visualmente e por tecnologia assistiva; os itens futuros são anunciados como desabilitados e ficam fora da sequência de foco. Em janelas estreitas, as abas e os grupos têm rolagem horizontal; o painel de Configurações também recebe foco por `Tab` e pode ser rolado com as setas esquerda/direita para consultar os grupos futuros.
 

@@ -100,7 +100,28 @@ Resistências de bielas/nós da 6118 §22.3.2:
 - fcd2 = 0,60 αv2 fcd;
 - fcd3 = 0,72 αv2 fcd.
 
-O motor adota fcd2 para a biela fissurada, fcd3 no nó sob apoio e fcd1 no nó comprimido junto ao suporte. Na biela também se compara o limite da 9062 (fcd para carga direta; 0,85 fcd indireta), conservando o menor.
+Por padrão, o motor adota fcd2 para a biela fissurada, fcd3 no nó sob apoio e fcd1 no nó comprimido junto ao suporte. Na biela também se compara o limite da 9062 (fcd para carga direta; 0,85 fcd indireta), conservando o menor. A escolha alternativa descrita a seguir afeta somente a verificação da biela.
+
+### Critério selecionável do limite da biela
+
+O parâmetro `design.strutLimit` pertence à **peça selecionada**. Pode ser editado em **Configurações > Dimensionamento > Limite da biela da peça selecionada** ou no mesmo controle em **Cálculo > Modelo e ações** das propriedades. Não é uma mudança global nos critérios das demais peças. Novas peças e arquivos antigos sem o campo usam `fcd2`.
+
+Os limites abaixo seguem exatamente a proposta da issue #5. Para fck = 30 MPa, γc = 1,4 e αv2 = 0,88:
+
+| Valor                       | Limite da verificação `strut` | Limite em MPa | Restrição                                     |
+| --------------------------- | ----------------------------- | ------------: | --------------------------------------------- |
+| `fcd2` (padrão conservador) | `min(0,60·αv2·fcd; β·fcd)`    |       11,3143 | β = 1 para carga direta ou 0,85 para indireta |
+| `fcd3`                      | `0,72·αv2·fcd`                |       13,5771 | Carga direta ou indireta                      |
+| `indirect085`               | `0,85·fcd`                    |       18,2143 | Somente carga indireta                        |
+| `direct100`                 | `fcd`                         |       21,4286 | Somente carga direta                          |
+
+Não há arredondamento intermediário; os números da tabela foram arredondados apenas para apresentação. O padrão conserva os valores e as verificações anteriores. As opções incompatíveis com a introdução da carga ficam desabilitadas. Um arquivo editado à mão com `direct100`/carga indireta ou `indirect085`/carga direta recebe `unsupported` com a explicação em português; não é silenciosamente convertido para outro critério.
+
+**Apenas o limite de `strut`, no modelo de bielas e tirantes, muda.** Sua tensão solicitante e geometria não mudam. Nós (`nodeSupport`), apoio (`bearing`), escoamento prévio (`ductility`, ainda calculado com fcd2/fcd3/fcd1 originais), inclinação (`angleMin`) e verificações complementares de El Debs mantêm seus valores. Atrito-cisalhamento e viga em balanço não usam esse limite: uma escolha compatível com a carga fica registrada, mas não altera as verificações desses modelos nem acrescenta uma conferência de biela que não foi aplicada.
+
+Quando uma alternativa é aplicada à biela, a verificação adicional `strutLimitCriterion` tem estado **`review`**, com o critério, o limite escolhido e o limite do padrão em MPa. Essa conferência não aprova nem reprova por si só; uma falha de outra verificação continua sendo falha. Mesmo que `strut` passe com o limite menos conservador, a pendência `review` permanece, inclusive na sugestão de armaduras. Memória, relatório, PDF e cálculo auditável registram a fórmula escolhida e essa pendência. O campo é salvo no esquema **4**, sem mudança de `schemaVersion`.
+
+As referências informadas para as alternativas são as indicadas na issue #5 do repositório: NBR 6118 §22.3.2 (`fcd3`) e NBR 9062:2017 §7.3.4.1, alíneas b (`indirect085`) e a (`direct100`). **Essas indicações não foram conferidas no texto normativo nesta contribuição.** Não se afirma equivalência ou aplicabilidade normativa das alternativas; elas exigem avaliação do responsável técnico. Não foram reproduzidos textos de normas.
 
 `fctm = 0,3 fck^(2/3)` até C50; acima, `2,12 ln[1+0,1(fck+8)]`, conforme o documento de 2026. `fctk,inf = 0,7 fctm`; `fctk,sup = 1,3 fctm`.
 

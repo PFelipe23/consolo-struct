@@ -55,7 +55,9 @@ const actions = (tab: (typeof ribbonTabs)[number]) =>
 
 describe("Catálogo e composição do ribbon", () => {
   it("preserva as 39 identidades, com grupos estáveis e sem duplicação dentro de uma aba", () => {
-    expect(Object.keys(ribbonCommands).sort()).toEqual([...baseline].sort());
+    expect(Object.keys(ribbonCommands).sort()).toEqual(
+      [...baseline, "strutLimit"].sort(),
+    );
     const reachable = new Set<Action>();
     for (const tab of ribbonTabs) {
       const groups = ribbonGroups[tab];
@@ -68,7 +70,7 @@ describe("Catálogo e composição do ribbon", () => {
         reachable.add(id);
       }
     }
-    expect([...reachable].sort()).toEqual([...baseline].sort());
+    expect([...reachable].sort()).toEqual([...baseline, "strutLimit"].sort());
   });
 
   it("limita Início ao fluxo principal e mantém a edição completa em Modelo", () => {
@@ -167,6 +169,7 @@ describe("Catálogo e composição do ribbon", () => {
       "forces",
       "grid",
       "design",
+      "strutLimit",
     ]);
     expect(actions("Exibir")).not.toContain("theme");
   });

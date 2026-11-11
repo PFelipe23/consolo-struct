@@ -39,6 +39,7 @@ import {
 import Viewport, { type ViewportHandle } from "./components/Viewport";
 import Ribbon, { type Action, type RibbonTab } from "./components/Ribbon";
 import { ribbonCommands } from "./components/ribbonCommands";
+import StrutLimitControl from "./components/StrutLimitControl";
 import PanelResizer from "./components/PanelResizer";
 import Inspector from "./components/Inspector";
 import ProjectBrowser from "./components/ProjectBrowser";
@@ -100,6 +101,7 @@ type Modal =
   | "export"
   | "about"
   | "delete"
+  | "strutLimit"
   | null;
 type History = { past: Project[]; present: Project; future: Project[] };
 
@@ -529,6 +531,9 @@ export default function App() {
       return;
     }
     switch (a) {
+      case "strutLimit":
+        setModal("strutLimit");
+        break;
       case "new": {
         setForm({
           name: "",
@@ -1140,24 +1145,28 @@ export default function App() {
             }}
           >
             <Dialog.Title>
-              {modal === "project" || modal === "newProject"
-                ? "Dados do projeto"
-                : modal === "piece"
-                  ? "Identificação da peça"
-                  : modal === "export"
-                    ? "Exportar projeto"
-                    : modal === "delete"
-                      ? "Excluir este consolo?"
-                      : "Conheça o ConsoloStruct"}
+              {modal === "strutLimit"
+                ? "Limite da biela da peça selecionada"
+                : modal === "project" || modal === "newProject"
+                  ? "Dados do projeto"
+                  : modal === "piece"
+                    ? "Identificação da peça"
+                    : modal === "export"
+                      ? "Exportar projeto"
+                      : modal === "delete"
+                        ? "Excluir este consolo?"
+                        : "Conheça o ConsoloStruct"}
             </Dialog.Title>
             <Dialog.Description>
-              {modal === "export"
-                ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
-                : modal === "about"
-                  ? "Editor paramétrico 2D/3D · versão 0.7.1 · detalhamento e quadro de aço."
-                  : modal === "delete"
-                    ? `${p.name} será removido. Você poderá desfazer esta ação.`
-                    : "Estas informações ficam salvas no arquivo do projeto."}
+              {modal === "strutLimit"
+                ? `Peça ${p.name} · ${p.description}. As alterações entram no histórico e ficam salvas no arquivo do projeto; não são aplicadas às outras peças.`
+                : modal === "export"
+                  ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
+                  : modal === "about"
+                    ? "Editor paramétrico 2D/3D · versão 0.7.1 · detalhamento e quadro de aço."
+                    : modal === "delete"
+                      ? `${p.name} será removido. Você poderá desfazer esta ação.`
+                      : "Estas informações ficam salvas no arquivo do projeto."}
             </Dialog.Description>
             <Dialog.Close
               className="modal-close icon-button"
@@ -1314,6 +1323,26 @@ export default function App() {
                   Excluir peça
                 </button>
               </div>
+            )}
+            {modal === "strutLimit" && (
+              <>
+                <StrutLimitControl
+                  piece={p}
+                  onChange={(value) =>
+                    updatePiece({
+                      ...p,
+                      design: { ...p.design, strutLimit: value },
+                    })
+                  }
+                />
+                <p>
+                  Alterar o critério torna resultados anteriores desatualizados.
+                  Use Calcular para conferir a nova revisão.
+                </p>
+                <div className="modal-actions">
+                  <Dialog.Close className="button">Concluir</Dialog.Close>
+                </div>
+              </>
             )}
             {modal === "export" && (
               <>

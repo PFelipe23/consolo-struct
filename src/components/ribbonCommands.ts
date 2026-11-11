@@ -230,6 +230,11 @@ export const ribbonCommands = {
     Table2,
     "Abrir ou reabrir a lista de peças e quantidades do projeto",
   ),
+  strutLimit: command(
+    "Limite da biela da peça selecionada",
+    SlidersHorizontal,
+    "Configurar o critério da biela da peça selecionada; mantém o padrão conservador e não muda outras peças",
+  ),
 };
 export type Action = keyof typeof ribbonCommands;
 export const ribbonTabs = [
@@ -408,6 +413,7 @@ export const ribbonGroups: Record<RibbonTab, Group[]> = {
           SlidersHorizontal,
         ),
         tool("design"),
+        tool("strutLimit"),
       ],
     },
     {

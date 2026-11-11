@@ -4,6 +4,9 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Adiciona o critério selecionável do limite da biela (`strutLimit`): padrão `fcd2` preservado e alternativas `fcd3`, `indirect085` e `direct100`. Opções incompatíveis com a introdução da carga ficam desabilitadas e são rejeitadas pelo motor com `unsupported`.
+- Disponibiliza o controle em Configurações > Dimensionamento > Limite da biela da peça selecionada e nas propriedades de Cálculo, usando o mesmo estado da peça, histórico e arquivo de projeto. Não altera critérios das outras peças nem o esquema 4.
+- Limites alternativos aplicados à biela geram `review` com a comparação ao padrão; memória, PDF e cálculo auditável mostram o critério e a fórmula escolhidos. Nós, apoio, escoamento prévio, inclinação, complemento de El Debs, atrito e viga em balanço mantêm suas verificações. Referências das alternativas indicadas no repositório, com conferência normativa pendente.
 - Adiciona a aba superior Configurações ao ribbon, com grupos Geral / Aparência, Desenho, Modelo 3D, Dimensionamento e Detalhamento, navegação por teclado e rolagem horizontal em janelas estreitas.
 - Reutiliza tema, cotas, armaduras, cargas e grade, preservando os acessos anteriores, seus estados e as regras atuais de persistência. O atalho Critérios da peça selecionada continua acessando dados da peça.
 - Identifica preferências futuras como Em breve, em itens desabilitados com texto visível. Abrir a central não altera documentos, dados, resultados nem histórico; não há mudanças no motor ou no formato de arquivos.
