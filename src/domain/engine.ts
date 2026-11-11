@@ -18,6 +18,11 @@ import {
   strutLimitCriteria,
   strutLimitValue,
 } from "./strutLimit";
+import {
+  coefficientText,
+  materialSafety,
+  materialSafetyReference,
+} from "./materialSafety";
 
 export const ENGINE_VERSION = "0.4.0";
 export const POLICY = "LC-ELU-2026.2";
@@ -100,9 +105,11 @@ export function materialProperties(
   fck: number,
   fyk: number,
   fykTransverse = 500,
+  gammaC = 1.4,
+  gammaS = 1.15,
 ) {
-  const fcd = fck / 1.4,
-    fyd = fyk / 1.15;
+  const fcd = fck / gammaC,
+    fyd = fyk / gammaS;
   const fctm =
     fck <= 50 ? 0.3 * fck ** (2 / 3) : 2.12 * Math.log(1 + 0.1 * (fck + 8));
   const alphaV2 = 1 - fck / 250;
@@ -110,9 +117,9 @@ export function materialProperties(
     fcd,
     fyd,
     fydLimited: Math.min(fyd, 435),
-    fywd: Math.min(fykTransverse / 1.15, 435),
+    fywd: Math.min(fykTransverse / gammaS, 435),
     fctm,
-    fctd: (0.7 * fctm) / 1.4,
+    fctd: (0.7 * fctm) / gammaC,
     fctkSup: 1.3 * fctm,
     alphaV2,
     etaC: fck <= 40 ? 1 : (40 / fck) ** (1 / 3),
@@ -278,8 +285,10 @@ export function minimumFlexuralSteel(
   d: number,
   fck: number,
   fyk: number,
+  gammaC = 1.4,
+  gammaS = 1.15,
 ) {
-  const m = materialProperties(fck, fyk);
+  const m = materialProperties(fck, fyk, 500, gammaC, gammaS);
   const moment = 0.8 * ((b * h * h) / 6) * m.fctkSup;
   const stress = m.alphaC * m.etaC * m.fcd;
   const discriminant = d * d - (2 * moment) / (b * stress);
@@ -408,10 +417,19 @@ function calculateCase(
           : "beam"
       : q.method;
   const isBeam = method === "beam";
+  const safety = materialSafety(q);
+  const coefficientValues = {
+    gammaC: safety.gammaC,
+    gammaS: safety.gammaS,
+    gammaCReference: safety.reference.gammaC,
+    gammaSReference: safety.reference.gammaS,
+  };
   const m = materialProperties(
     p.materials.fck,
     p.materials.fyk,
     q.fykTransverse,
+    safety.gammaC,
+    safety.gammaS,
   );
   const gn9062 =
     q.production === "factory"
@@ -509,6 +527,8 @@ function calculateCase(
     d,
     p.materials.fck,
     p.materials.fyk,
+    safety.gammaC,
+    safety.gammaS,
   );
   const asMechanical = ((0.04 * p.materials.fck) / p.materials.fyk) * b * d;
   // In the beam branch an indeterminate As,flex (NaN) keeps tieRequired indeterminate.
@@ -617,6 +637,15 @@ function calculateCase(
     r.stirrupCount > 1 ? stirrupLayout(p).pitch : g.length;
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
+  if (safety.below.length)
+    add(
+      note(
+        "materialSafety",
+        "Coeficientes dos materiais abaixo da referência",
+        `${safety.reference.label}: ${safety.below.map((c) => `${c.symbol} adotado ${coefficientText(c.adopted)}, referência ${coefficientText(c.reference)}`).join("; ")}. Escolha explícita do responsável técnico; requer conferência complementar. O produto não certifica o enquadramento do elemento.`,
+        materialSafetyReference,
+      ),
+    );
   if (q.literatureRecommendations) {
     add(
       check(
@@ -1332,6 +1361,7 @@ function calculateCase(
     );
   const values = {
     ...m,
+    ...coefficientValues,
     d,
     dPrime: dp,
     a,
@@ -1421,6 +1451,7 @@ function calculateCase(
     // Strut-and-tie, friction and El Debs quantities do not exist in this model.
     const beamValues: Record<string, number> = {
       ...m,
+      ...coefficientValues,
       d,
       dPrime: dp,
       a,
@@ -1535,7 +1566,7 @@ export function calculate(p: Piece): CalculationResult {
     values: {},
     assumptions: [
       "Consolo simples, concreto armado, seção retangular na ligação, carga vertical descendente e ações no plano médio; ELU estático.",
-      "γc=1,4 e γs=1,15 (combinações normais); γn ≥ 1,2 por compatibilização conservadora das duas normas fornecidas.",
+      `γc=${coefficientText(p.design.gammaC ?? 1.4)} e γs=${coefficientText(p.design.gammaS ?? 1.15)} (combinações normais); γn ≥ 1,2 por compatibilização conservadora das duas normas fornecidas.`,
       "As combinações de ações são fornecidas pelo usuário. Valores de cálculo já incluem γn; não são majorados novamente.",
       "No modo estimado, Hd = coeficiente do apoio × Vd + H adicional positivo. No modo análise, H é a resultante total justificada. Compressão horizontal favorável é ignorada.",
       p.design.literatureRecommendations

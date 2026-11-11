@@ -10,6 +10,15 @@ export const strutLimitSchema = z.enum([
   "direct100",
 ]);
 export type StrutLimit = z.infer<typeof strutLimitSchema>;
+const materialFactor = (symbol: string, initial: number) => {
+  const error = `${symbol} deve ser um número finito entre 1,0 e 2,0.`;
+  return z
+    .number({ error })
+    .finite({ error })
+    .min(1, { error })
+    .max(2, { error })
+    .default(initial);
+};
 export const designSchema = z.object({
   method: z.enum(["auto", "strut", "friction"]),
   strutLimit: strutLimitSchema.default("fcd2"),
@@ -19,6 +28,8 @@ export const designSchema = z.object({
     .enum(["specified", "outerThird", "threeQuarter"])
     .default("specified"),
   production: z.enum(["factory", "precast", "cast"]),
+  gammaC: materialFactor("γc", 1.4),
+  gammaS: materialFactor("γs", 1.15),
   permanentPredominant: z.boolean(),
   gammaN: z.number().finite().min(1.2).max(3),
   forceMode: z.enum(["characteristic", "design"]),
@@ -97,6 +108,8 @@ export function defaultDesign(
     literatureRecommendations: true,
     reactionPosition: "specified",
     production: "precast",
+    gammaC: 1.4,
+    gammaS: 1.15,
     permanentPredominant: true,
     gammaN: 1.2,
     forceMode: "characteristic",

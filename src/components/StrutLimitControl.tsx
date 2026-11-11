@@ -23,6 +23,8 @@ export default function StrutLimitControl({
     piece.materials.fck,
     piece.materials.fyk,
     piece.design.fykTransverse,
+    piece.design.gammaC,
+    piece.design.gammaS,
   );
   const standard = strutLimitValue("fcd2", piece.design.loadType, material);
   const limit = strutLimitValue(selected, piece.design.loadType, material);

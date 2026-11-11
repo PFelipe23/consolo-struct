@@ -88,9 +88,25 @@ Cada combinação conserva seu par simultâneo V/H. O envelope é feito **separa
 
 ## Materiais
 
-Combinação normal: γc = 1,40; γs = 1,15. Não são aplicadas automaticamente reduções de γc por fabricação.
+Combinação normal: padrões γc = 1,40 e γs = 1,15. Ambos são editáveis **por peça**, entre 1,0 e 2,0, em Cálculo ou em **Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada**. Projetos antigos recebem os padrões ao abrir, sem mudança de `schemaVersion` (4). Alterar o processo de produção não preenche nem reduz coeficientes automaticamente.
+
+Pares de referência adotados exatamente como informados na [issue #2](https://github.com/ricardocorsini/consolo-struct/issues/2), sem acesso aos textos normativos nesta contribuição:
+
+| Processo                                          | γc de referência | γs de referência |
+| ------------------------------------------------- | ---------------- | ---------------- |
+| Pré-moldado (`precast`)                           | 1,40             | 1,15             |
+| Moldado no local (`cast`)                         | 1,40             | 1,15             |
+| Pré-fabricado com controle de fábrica (`factory`) | 1,30             | 1,10             |
+
+A redução para pré-fabricados é tratada como **permissão** da NBR 9062:2017 §8.1, conforme a issue, e exige decisão explícita do responsável técnico. O produto não certifica o enquadramento do elemento nessa permissão. Referências: NBR 9062:2017 §8.1; NBR 6118:2026. A confirmação normativa e das condições reais de produção cabe ao responsável técnico; não se reproduz texto das normas.
+
+Cada coeficiente adotado abaixo da referência de produção é listado, com valor adotado e referência, numa verificação `materialSafety` com estado **review**. A edição não é bloqueada por esse motivo. Igualdade ou valores superiores não geram essa pendência. Uma falha em outra verificação ainda pode determinar o estado geral `fail`; o aviso individual continua `review`. Adotados e referências ficam registrados na memória, PDF e cálculo auditável. As notas de detalhamento registram valores alterados e eventuais pendências, preservando os desenhos padrão.
 
 `fcd = fck/γc`; `fyd = fyk/γs`; `αv2 = 1−fck/250`.
+
+Também se usam os coeficientes adotados em `fctd = 0,7 fctm/γc`, na ancoragem, e em `fywd = min(fywk/γs; 435 MPa)`. A armadura mínima por flexão recebe os mesmos γc e γs. Permanecem os tetos de 435 MPa de `fydLimited` e `fywd`, sem alteração das demais fórmulas ou constantes.
+
+Para C30/CA-50, 1,40/1,15 produz `fcd = 21,4285714286 MPa` e `fyd = 434,7826086957 MPa`; 1,30/1,10 produz `fcd = 23,0769230769 MPa` e `fyd = 454,5454545455 MPa`. Neste segundo caso o tirante usa **435 MPa** pelo teto existente; a variação da armadura não é necessariamente a estimativa de 4,3% da issue. Unidades internas permanecem mm, N e MPa, sem arredondamento intermediário. γf, γn, combinações e classes de aço não são alterados por esta configuração.
 
 Para os modelos de consolo adota-se conservadoramente `fy = min(fyd; 435 MPa)`, conforme recomendação do trecho de El Debs. Para costura e suspensão, o limite 435 MPa também é explícito na 9062. A ancoragem usa fyd do material, sem reduzir artificialmente a força de escoamento.
 
