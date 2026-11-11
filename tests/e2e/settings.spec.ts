@@ -13,7 +13,7 @@ async function savedProject(page: Page) {
   const event = page.waitForEvent("download");
   await page
     .locator(".quick-access")
-    .getByRole("button", { name: "Salvar", exact: true })
+    .getByRole("button", { name: "Salvar projeto", exact: true })
     .click();
   const project = JSON.parse(
     await readFile((await (await event).path())!, "utf8"),
@@ -87,10 +87,10 @@ test("aba única, grupos, relação com o painel e navegação completa por tecl
   await expect(panel(page)).toBeFocused();
   for (const name of [
     "Tema escuro",
-    "Cotas",
-    "Armaduras",
-    "Cargas",
-    "Grade",
+    "Mostrar cotas",
+    "Mostrar armaduras",
+    "Mostrar cargas",
+    "Mostrar grade",
     "Critérios da peça selecionada",
   ]) {
     await page.keyboard.press("Tab");
@@ -112,10 +112,14 @@ test("desenho usa os mesmos estados e efeitos de Exibir, sem nova persistência"
   page,
 }) => {
   const controls = [
-    { name: "Cotas", selector: ".dimension", initial: true },
-    { name: "Armaduras", selector: ".steel", initial: true },
-    { name: "Cargas", selector: ".force-label", initial: true },
-    { name: "Grade", selector: "#piece-drawing > rect", initial: false },
+    { name: "Mostrar cotas", selector: ".dimension", initial: true },
+    { name: "Mostrar armaduras", selector: ".steel", initial: true },
+    { name: "Mostrar cargas", selector: ".force-label", initial: true },
+    {
+      name: "Mostrar grade",
+      selector: "#piece-drawing > rect",
+      initial: false,
+    },
   ];
   for (const { name, selector, initial } of controls) {
     await settings(page).click();
@@ -142,7 +146,7 @@ test("desenho usa os mesmos estados e efeitos de Exibir, sem nova persistência"
     ).toHaveAttribute("aria-pressed", String(initial));
 });
 
-test("tema sincroniza com Exibir e barra superior e mantém a persistência existente", async ({
+test("tema migra de Exibir e sincroniza com barra superior e mantém a persistência existente", async ({
   page,
 }) => {
   await settings(page).click();
@@ -158,8 +162,9 @@ test("tema sincroniza com Exibir e barra superior e mantém a persistência exis
     await page.evaluate(() => localStorage.getItem("consolostruct.theme")),
   ).toBe("dark");
   await ribbonTab(page, "Exibir").click();
-  await panel(page)
-    .getByRole("button", { name: "Tema claro", exact: true })
+  await expect(panel(page).locator('[data-action="theme"]')).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Alternar tema", exact: true })
     .click();
   await settings(page).click();
   await expect(dark).toHaveAttribute("aria-pressed", "false");
@@ -299,16 +304,19 @@ test("atalho de critérios abre dados da peça e conserva os acessos anteriores"
     .click();
   await expect(page.locator(".design-panel")).toBeVisible();
   await expect(page.locator(".property-selection")).toContainText("C02");
-  for (const name of ["Início", "Modelo"]) {
+  for (const name of ["Modelo"]) {
     await ribbonTab(page, name).click();
     await panel(page)
-      .getByRole("button", { name: "Critérios de cálculo", exact: true })
+      .getByRole("button", {
+        name: "Critérios da peça selecionada",
+        exact: true,
+      })
       .click();
     await expect(page.locator(".design-panel")).toBeVisible();
   }
   await ribbonTab(page, "Documentação").click();
   await expect(
-    panel(page).getByRole("button", { name: "Detalhes e aço", exact: true }),
+    panel(page).getByRole("button", { name: "Detalhamento", exact: true }),
   ).toBeEnabled();
   expect(await savedProject(page)).toEqual(before);
 });
@@ -322,8 +330,8 @@ test("controles reutilizados afetam a vista 3D sem mudar câmera ou documento", 
   const camera = await view.getAttribute("data-camera");
   await settings(page).click();
   for (const [name, selector] of [
-    ["Cotas", ".three-dimension-label"],
-    ["Cargas", ".three-force-label"],
+    ["Mostrar cotas", ".three-dimension-label"],
+    ["Mostrar cargas", ".three-force-label"],
   ]) {
     await panel(page).getByRole("button", { name, exact: true }).click();
     await expect(view.locator(selector)).toHaveCount(0);

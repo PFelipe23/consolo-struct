@@ -2,6 +2,25 @@
 
 O ConsoloStruct calcula o **ELU estático local de consolos curtos e muito curtos de concreto armado**. Não substitui o projeto estrutural completo nem a conferência do responsável técnico. Antes do uso profissional, leia [Critérios de cálculo](CRITERIOS-DE-CALCULO.md), [Validação do motor](VALIDACAO-MOTOR.md) e [Detalhamento](DETALHAMENTO.md).
 
+## Ferramentas e fluxo principal
+
+**Início** reúne oito comandos: Novo consolo, Geometria, Ações da peça, Calcular, Sugerir armaduras, Memória, Detalhamento e Exportar. O caminho Novo consolo → editar geometria/ações → Calcular → Memória → Detalhamento pode ser realizado sem trocar de aba superior.
+
+| Aba          | Onde encontrar                                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arquivo      | Novo projeto, Abrir, **Salvar projeto** (`.consolo.json`), Dados do projeto e Exportar                                                                                     |
+| Modelo       | Novo consolo, Duplicar, Identificação da peça, Excluir, Geometria, Ações da peça, Materiais, Editar armaduras, Critérios da peça selecionada, Calcular e Sugerir armaduras |
+| Exibir       | Vistas, Selecionar/Pan, enquadramento/zoom do modelo, Mostrar cotas/armaduras/cargas/grade e painéis                                                                       |
+| Documentação | Memória, Peças do projeto, Detalhamento e exportações diretas Memória PDF, Geometria DXF/SVG e Quantidades CSV                                                             |
+
+**Editar armaduras** muda os parâmetros da peça; **Mostrar armaduras** só altera a representação. **Ações da peça** edita forças; **Mostrar cargas** só controla sua exibição. Os critérios continuam sendo dados da peça selecionada. Geometria, Ações e Critérios reabrem o painel de propriedades quando ele está fechado.
+
+Selecionar uma aba superior apenas escolhe ferramentas e preserva o documento, a peça, os resultados e o histórico. Um campo ainda em edição continua sendo confirmado ou validado ao perder foco; um rascunho inválido não é descartado silenciosamente. Use setas esquerda/direita, `Home` e `End` nas abas e `Tab` para alcançar os comandos; em janelas estreitas, a faixa permite rolagem horizontal.
+
+Os controles de navegação do ribbon retornam à **vista de modelo**. Para navegar no detalhamento sem mudar de documento, use seus controles locais. **Calcular revisão atual**, dentro da memória, mantém o relatório aberto; **Calcular**, no ribbon, retorna ao modelo. **Sugerir armaduras** pode modificar a peça e continua participando do histórico.
+
+O tema fica em **Configurações > Geral / Aparência**, além do acesso rápido. Consulte o [inventário antes/depois e as capturas](REORGANIZACAO-RIBBON.md).
+
 ## 1. Criar ou abrir um projeto
 
 Use **Novo projeto** e confirme nome, cliente e responsável em Dados do projeto. Cancelar mantém o projeto anterior. Use **Abrir** para carregar um projeto; o exemplo `examples/casos-validacao.lume.json` permite explorar o motor, e `examples/detalhamento/consolos-detalhados.lume.json` demonstra tirantes simples e duplos.
@@ -35,7 +54,7 @@ Para experimentar uma falha conhecida, no exemplo Curto-ELU reduza a ancoragem d
 - Em 2D: botão central ou Espaço + arrastar para pan; roda para zoom no cursor; `F` enquadra.
 - Clique em uma cota para editar; `Enter` confirma e `Esc` cancela. `Ctrl+Z` desfaz e `Ctrl+Shift+Z` refaz.
 - Em **Vista 3D**, arraste com o botão esquerdo para orbitar e com central/direito ou Espaço para pan. Use os presets Frontal, Superior, Lateral e Isométrica.
-- Em **Exibir**, alterne cotas, cargas, armaduras, grade e transparência.
+- Em **Exibir**, use Mostrar cotas, Mostrar cargas, Mostrar armaduras e Mostrar grade. A transparência fica junto à Vista 3D.
 - A árvore pode manter vários consolos expandidos. Expandir não troca a seleção. Clique em ×n para editar a quantidade.
 - Feche abas pelo × e reabra pelo navegador ou faixa de ferramentas. Fechar uma vista preserva o projeto.
 
@@ -45,15 +64,15 @@ A vista 3D e suas armaduras são representações esquemáticas, não análise r
 
 A aba superior **Configurações**, após **Documentação**, centraliza os acessos abaixo. Ela pertence à faixa de ferramentas (ribbon), independentemente das abas de documentos. Abri-la preserva o documento ativo, a peça selecionada, os resultados e o histórico de desfazer/refazer.
 
-| Grupo             | Disponível agora                                                                               | Em breve (itens desabilitados)                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência dos acessos em Exibir e na barra superior | Preferências gerais                                              |
-| Desenho           | **Cotas**, **Armaduras**, **Cargas** e **Grade**, sincronizados com Exibir                     | Cores, espessuras e estilo de cotas                              |
-| Modelo 3D         | —                                                                                              | Preferências de visualização e câmera padrão                     |
-| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades                   | Padrões gerais de dimensionamento                                |
-| Detalhamento      | —                                                                                              | Padrões de apresentação, textos, cotas e identificação de barras |
+| Grupo             | Disponível agora                                                                                           | Em breve (itens desabilitados)                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência do acesso na barra superior                           | Preferências gerais                                              |
+| Desenho           | **Mostrar cotas**, **Mostrar armaduras**, **Mostrar cargas** e **Mostrar grade**, sincronizados com Exibir | Cores, espessuras e estilo de cotas                              |
+| Modelo 3D         | —                                                                                                          | Preferências de visualização e câmera padrão                     |
+| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades                               | Padrões gerais de dimensionamento                                |
+| Detalhamento      | —                                                                                                          | Padrões de apresentação, textos, cotas e identificação de barras |
 
-O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os efeitos e limites atuais de cada vista, sem nova persistência; elas não configuram o desenho de detalhamento. O atalho de critérios abre os **dados da peça selecionada**, não preferências globais. Os acessos anteriores em Início, Modelo, Exibir e Documentação continuam disponíveis.
+O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os efeitos e limites atuais de cada vista, sem nova persistência; elas não configuram o desenho de detalhamento. O atalho de critérios abre os **dados da peça selecionada**, não preferências globais. Os comandos de edição ficam em Modelo e as alternâncias de desenho também continuam em Exibir; Início mantém os oito atalhos do fluxo principal.
 
 Itens **Em breve** são informativos, não executam ações nem salvam configurações. Não há formulário de preferências futuras nem botão Salvar/Aplicar. Nenhum critério ou resultado de engenharia é alterado por abrir esta aba.
 

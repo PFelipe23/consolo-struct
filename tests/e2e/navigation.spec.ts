@@ -90,7 +90,7 @@ test("Novo projeto exige identidade antes de substituir o atual e cancelar prese
   const event = page.waitForEvent("download");
   await page
     .locator(".quick-access")
-    .getByRole("button", { name: "Salvar", exact: true })
+    .getByRole("button", { name: "Salvar projeto", exact: true })
     .click();
   const p = JSON.parse(await readFile((await (await event).path())!, "utf8"));
   expect(p.client).toBe("Cliente A");

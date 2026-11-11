@@ -71,7 +71,9 @@ test("tirante duplo, revisão e notas persistem e participam do histórico", asy
     "Conferir posição com a forma do pilar.",
   );
   const event = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Salvar projeto", exact: true })
+    .click();
   const project = JSON.parse(
     await readFile((await (await event).path())!, "utf8"),
   );

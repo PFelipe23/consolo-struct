@@ -24,8 +24,10 @@ test("calcula, altera ancoragem e identifica a revisão obsoleta", async ({
   await expect(page.locator(".result-summary").first()).toContainText(
     "Atende às verificações implementadas",
   );
+  await page.getByRole("tab", { name: "Modelo", exact: true }).click();
   await page
-    .getByRole("button", { name: "Critérios de cálculo", exact: true })
+    .locator(".ribbon-panel")
+    .getByRole("button", { name: "Critérios da peça selecionada", exact: true })
     .click();
   await page
     .locator(".design-panel")
@@ -45,8 +47,10 @@ test("calcula, altera ancoragem e identifica a revisão obsoleta", async ({
 test("ativa complementos e exporta a reação deslocada com os mesmos valores da memória", async ({
   page,
 }) => {
+  await page.getByRole("tab", { name: "Modelo", exact: true }).click();
   await page
-    .getByRole("button", { name: "Critérios de cálculo", exact: true })
+    .locator(".ribbon-panel")
+    .getByRole("button", { name: "Critérios da peça selecionada", exact: true })
     .click();
   await page
     .getByLabel("Aplicar recomendações complementares de El Debs")
@@ -69,6 +73,7 @@ test("ativa complementos e exporta a reação deslocada com os mesmos valores da
     .getByLabel("Posição de cálculo da reação vertical")
     .selectOption("outerThird");
   await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("tab", { name: "Início", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: /Cálculo auditável/ }).click();
@@ -92,8 +97,10 @@ test("ativa complementos e exporta a reação deslocada com os mesmos valores da
 test("inclui combinação, exporta memória auditável e preserva simultaneidade", async ({
   page,
 }) => {
+  await page.getByRole("tab", { name: "Modelo", exact: true }).click();
   await page
-    .getByRole("button", { name: "Critérios de cálculo", exact: true })
+    .locator(".ribbon-panel")
+    .getByRole("button", { name: "Critérios da peça selecionada", exact: true })
     .click();
   await page
     .locator(".design-panel")
@@ -106,6 +113,7 @@ test("inclui combinação, exporta memória auditável e preserva simultaneidade
   await page.getByLabel("V · 1").press("Enter");
   await page.getByLabel("H · 1").fill("20");
   await page.getByLabel("H · 1").press("Enter");
+  await page.getByRole("tab", { name: "Início", exact: true }).click();
   await page.getByRole("button", { name: "Exportar", exact: true }).click();
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: /Cálculo auditável/ }).click();
@@ -125,7 +133,9 @@ test("sugestão de armadura pode ser desfeita e não altera suporte", async ({
     .click();
   await expect(page.getByRole("status")).toContainText("Arranjo sugerido");
   let dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Salvar projeto", exact: true })
+    .click();
   let file = await dl;
   let saved = JSON.parse(await readFile((await file.path())!, "utf8"));
   expect(
@@ -134,7 +144,9 @@ test("sugestão de armadura pode ser desfeita e não altera suporte", async ({
   expect(saved.pieces[0].design.supportRebarArea).toBe(1000);
   await page.getByRole("button", { name: "Desfazer", exact: true }).click();
   dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Salvar projeto", exact: true })
+    .click();
   file = await dl;
   saved = JSON.parse(await readFile((await file.path())!, "utf8"));
   expect(saved.pieces[0].rebar.tieCount).toBe(4);
