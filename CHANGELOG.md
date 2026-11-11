@@ -4,6 +4,7 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Adiciona à esquerda da seção A–A da modelagem a cota de consulta d’, do topo ao centroide existente de todas as barras do tirante, em cm. Acompanha Mostrar cotas, alterações do arranjo e navegação, sem mudar cálculos ou arquivos. Primeira etapa da issue #19 (sub-issue #20); o posicionamento do grampo N2 fica para a #21.
 - Torna γc e γs editáveis por peça em Cálculo e em Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada. Padrões 1,40/1,15 em arquivos antigos, sem mudança de esquema; histórico e salvamento preservam as escolhas. A troca de produção não muda os valores automaticamente.
 - Usa os coeficientes adotados em fcd, fyd, fctd, fywd e armadura mínima de flexão, preservando os tetos de 435 MPa. Registra adotados e referências na memória, PDF, cálculo auditável e notas de detalhamento com valores alterados.
 - Acrescenta pendência `review` para cada coeficiente abaixo do par informado na issue #2: pré-moldado/moldado no local 1,40/1,15; pré-fabricado 1,30/1,10. A redução é tratada como permissão da NBR 9062:2017 §8.1, sujeita à decisão do responsável técnico; o produto não certifica o enquadramento do elemento. Referências normativas não conferidas nesta contribuição. γf, γn, combinações e classes de aço permanecem iguais.

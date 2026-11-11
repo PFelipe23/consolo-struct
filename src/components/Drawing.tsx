@@ -112,6 +112,9 @@ export default function Drawing({
       : []),
   ];
   const s = Math.min(480 / (g.columnWidth + g.length), 340 / (g.height + 80));
+  const sectionLeft = 400 - (g.width * s) / 2;
+  const sectionCentroid = 140 + layout.dPrime * s;
+  const dPrimeLabel = `d’ = ${number(layout.dPrime / 10, 1)} cm`;
   const ox = (800 - (g.columnWidth + g.length) * s) / 2 + g.columnWidth * s,
     oy = 185;
   const X = (x: number) => ox + x * s,
@@ -252,6 +255,36 @@ export default function Drawing({
             )}
             {dimensions && (
               <>
+                <g
+                  className="dimension dimension-derived"
+                  role="img"
+                  aria-label={`${dPrimeLabel} · topo ao centroide do tirante`}
+                >
+                  <title>
+                    Distância do topo ao centroide de todas as barras do tirante
+                  </title>
+                  <path
+                    d={`M${sectionLeft - 40} 140V${sectionCentroid}`}
+                    fill="none"
+                  />
+                  <path
+                    d={`M${sectionLeft - 44} 144l8 -8 M${sectionLeft - 44} ${sectionCentroid + 4}l8 -8`}
+                    fill="none"
+                  />
+                  <g className="dimension-extension" fill="none">
+                    <path
+                      d={`M${sectionLeft} 140H${sectionLeft - 48} M${sectionLeft} ${sectionCentroid}H${sectionLeft - 48}`}
+                    />
+                  </g>
+                  <text
+                    x={sectionLeft - 54}
+                    y={(140 + sectionCentroid) / 2}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                  >
+                    {dPrimeLabel}
+                  </text>
+                </g>
                 <Dim
                   x1={400 - (g.width * s) / 2}
                   y1={110}
