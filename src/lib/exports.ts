@@ -1,4 +1,10 @@
-import { calculate, ENGINE_VERSION, POLICY } from "../domain/engine";
+import {
+  calculate,
+  classificationLabels,
+  ENGINE_VERSION,
+  methodLabels,
+  POLICY,
+} from "../domain/engine";
 import {
   area,
   number,
@@ -267,6 +273,9 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       : Number.isFinite(n)
         ? n.toLocaleString("pt-BR", { maximumFractionDigits: 5 })
         : "indisponivel";
+  // Omitted beam values are indeterminate (invalid flexural domain), not unavailable.
+  const beamNum = (n: number | undefined) =>
+    n === undefined ? "indeterminado" : num(n);
   header();
   line(project.name, 13, true);
   line(`Peca: ${p.name} | ${p.description} | Quantidade: ${p.quantity}`);
@@ -309,9 +318,81 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   title("4. Memoria por combinacao");
   for (const [i, c] of result.combinations.entries()) {
     title(
-      `${i + 1}. ${c.name} | ${c.classification === "short" ? "CURTO" : "MUITO CURTO"} | ${c.method === "strut" ? "BIELAS E TIRANTES" : "ATRITO-CISALHAMENTO"}`,
+      `${i + 1}. ${c.name} | ${classificationLabels[c.classification].toUpperCase()} | ${methodLabels[c.method].toUpperCase()}`,
     );
     const v = c.values;
+    if (c.method === "beam") {
+      for (const [label, val, unit] of [
+        ["Vd", v.vertical, "N"],
+        ["Hd total", v.horizontal, "N"],
+        ["Hd informado positivo", v.horizontalProvided, "N"],
+        ["Hd estimado no apoio", v.horizontalEstimated, "N"],
+        ["Fator de majoracao aplicado", v.factor, ""],
+        ["gamma n 9062", v.gammaN9062, ""],
+        ["gamma n adotado", v.gammaN, ""],
+        ["fcd", v.fcd, "MPa"],
+        ["fyd adotado", v.fydLimited, "MPa"],
+        ["d", v.d, "mm"],
+        ["d'", v.dPrime, "mm"],
+        ["a/d", v.ratio, ""],
+        ["Centro fisico do apoio", v.bearingCenter, "mm"],
+        ["a de calculo", v.a, "mm"],
+        ["Excentricidade total no contato", v.bearingEccentricity, "mm"],
+        ["Piso bibliografico para H", v.horizontalFloor, "N"],
+        ["Parcela de H acrescentada pelo piso", v.horizontalFloorAdded, "N"],
+        ["Complementos El Debs ativos (1=sim)", v.literatureEnabled, ""],
+        ["Vsd", v.beam_shear, "N"],
+        ["Msd = Vd a + Hd (hapoio + d')", v.beam_moment, "N.mm"],
+        ["kmd", v.beam_kmd, ""],
+        ["kmd limite (radicando = 0)", v.beam_kmdLimit, ""],
+        ["Radicando", v.beam_radicand, ""],
+        ["kx", v.beam_kx, ""],
+        ["kz", v.beam_kz, ""],
+        ["As,flex", v.beam_flexSteel, "mm2"],
+        ["As,h = Hd/fy", v.beam_horizontalSteel, "mm2"],
+        ["As modelo resistente", v.tieModel, "mm2"],
+        ["As minima por flexao", v.tieMinimumFlexure, "mm2"],
+        ["As minima mecanica", v.tieMinimumMechanical, "mm2"],
+        ["As necessaria", v.tieRequired, "mm2"],
+        ["As efetiva", v.tieProvided, "mm2"],
+        ["VRd2", v.beam_shearLimit, "N"],
+        ["0,67 VRd2", v.beam_reducedShearLimit, "N"],
+        ["Vc (desconsiderado)", v.beam_concreteShear, "N"],
+        ["(asw/s) necessario", v.beam_stirrupRateRequired, "mm2/mm"],
+        ["(asw/s) minimo", v.beam_stirrupRateMinimum, "mm2/mm"],
+        ["(asw/s) adotado", v.beam_stirrupRate, "mm2/mm"],
+        ["Atransv necessaria", v.beam_transverseRequired, "mm2"],
+        ["Atransv adotada", v.stirrupProvided, "mm2"],
+        ["smax dos estribos", v.beam_stirrupSpacingLimit, "mm"],
+        ["Passo real de N3 (ou L com um estribo)", v.beam_stirrupSpacing, "mm"],
+        ...(v.beam_stitchApplies
+          ? [
+              ["(As/s) costura", v.beam_stitchRate, "mm2/mm"],
+              ["As costura superior", v.beam_stitchRequired, "mm2"],
+              ["Espacamento real da costura no detalhe", v.stitchSpacing, "mm"],
+            ]
+          : [
+              ["As pele por face (revisar)", v.beam_skinPerFace, "mm2"],
+              ["As pele total (revisar)", v.beam_skinTotal, "mm2"],
+            ]),
+        ["As fendilhamento transversal", v.splittingRequired, "mm2"],
+        ["As suspensao", v.suspensionRequired, "mm2"],
+        ["fbd", v.fbd, "MPa"],
+        ["lb basico", v.lb, "mm"],
+        ["lb necessario", v.anchorRequired, "mm"],
+      ] as [string, number | undefined, string][])
+        line(`${label} = ${beamNum(val)} ${val === undefined ? "" : unit}`, 9);
+      line(
+        "Viga em balanco (1 < a/d <= 2): flexao simples e cisalhamento pelo Modelo I com Vc = 0. Nao se aplicam bielas e tirantes nem os complementos de El Debs do consolo curto (mantido apenas o piso Hd >= 0,20 Vd, quando ativado). ELS, fissuracao e flecha nao verificados. Referencias citadas no GN Corbel, com conferencia pendente.",
+        8,
+      );
+      for (const ch of c.checks)
+        line(
+          `${ch.status.toUpperCase()} | ${ch.label}: ${num(ch.demand)} / ${num(ch.capacity)} ${ch.unit}`,
+          8,
+        );
+      continue;
+    }
     for (const [label, val, unit] of [
       ["Vd", v.vertical, "N"],
       ["Hd total", v.horizontal, "N"],
@@ -407,6 +488,10 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   line(
     "Material adicional: Base Consolo, trecho El Debs secao 3.5.1, pp.125-130, equacoes 3.18-3.27 e quadro 3.2. As recomendacoes bibliograficas sao identificadas separadamente das exigencias normativas. Modelos auxiliares nao sao aplicaveis fora de seu dominio.",
   );
+  if (result.combinations.some((c) => c.method === "beam"))
+    line(
+      "Viga em balanco (1 < a/d <= 2): NBR 6118 secoes 14.6.4.3, 17.2, 17.3.5.2.3, 17.4.2.2 e 18.3.3.2; NBR 9062:2017 secoes 7.3.6 e 7.3.7.2, conforme citadas no GN Corbel. As referencias aguardam conferencia nos textos da ABNT pelo responsavel tecnico.",
+    );
   line(
     "Veja docs/CRITERIOS-DE-CALCULO.md e docs/VALIDACAO-MOTOR.md no pacote de codigo. O arquivo .calc.json exporta todas as entradas e resultados com precisao completa.",
   );
