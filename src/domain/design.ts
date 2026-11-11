@@ -67,6 +67,9 @@ export const designSchema = z.object({
   supportAnchor: z.enum(["straight", "hook"]),
   supportAnchorLength: length,
   hookNormalCover: length,
+  // Missing fields keep the behaviour of projects saved before these options.
+  supportWeldedBar: z.boolean().default(false),
+  anchorRatioFloor: z.boolean().default(false),
   bond: z.enum(["good", "poor"]),
   anchorConfinementArea: z.number().finite().min(0).max(100000),
   supportRebarArea: z.number().finite().min(0).max(100000),
@@ -139,6 +142,8 @@ export function defaultDesign(
     supportAnchor: "straight",
     supportAnchorLength: Math.max(10, column - cover),
     hookNormalCover: cover,
+    supportWeldedBar: false,
+    anchorRatioFloor: false,
     bond: "poor",
     anchorConfinementArea: 0,
     supportRebarArea: 0,

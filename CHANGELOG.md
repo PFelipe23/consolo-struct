@@ -4,6 +4,11 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Ancoragem do tirante no suporte (issue #12): o coeficiente α cobre os quatro casos da NBR 6118 §9.4.2.5. Reta vale 1,0; gancho com cobrimento normal ≥ 3φ vale 0,7; barra transversal soldada vale 0,7; gancho + soldada vale 0,5. Nova caixa **Barra transversal soldada na ancoragem** (`supportWeldedBar`) em Cálculo > Ancoragem no suporte e no Detalhamento. Quando marcada, gera uma pendência "conferir" sobre a geometria da barra, que o programa não verifica.
+- Nova opção conservadora **Limitar a razão As,req/As,ef ao mínimo de 1,0** (`anchorRatioFloor`) em Cálculo > Ancoragem no suporte.
+- A verificação `anchorage` mantém id e comparação; a fórmula passa a `lb,nec = max(α·lb·razão; 0,3lb; 10φ; 100)`. A memória, o PDF e o cálculo auditável mostram α, a razão usada e `lb`, e expõem os valores `anchorRatio`, `anchorRatioFloor` e `anchorWeldedBar`.
+- Os quatro valores de α foram conferidos com a NBR 6118:2014 §9.4.2.5. O texto da edição citada pelo motor não foi conferido nesta contribuição.
+- As duas opções vêm desligadas por padrão. Arquivos antigos abrem sem os campos, com resultados idênticos e sem mudança do esquema 4.
 - Otimiza Sugerir armaduras: avalia todas as camadas da primeira contagem viável por bitola e poda apenas áreas estritamente maiores que a melhor encontrada, preservando a pontuação e os empates. O contador passa a mostrar candidatos efetivamente avaliados.
 - Dimensiona costura superior/inferior, estribos, fendilhamento e suspensão em cada candidato antes de julgá-lo; inclui as respectivas verificações críticas e mantém o tratamento de viga/pele. Nenhuma fórmula ou limite do motor é alterado.
 - Explica sugestões sem solução com os rótulos críticos comuns aos candidatos ou as falhas do último arranjo da maior bitola, preservando as entradas. Mantém as mensagens de domínio e as pendências externas; registra a comparação com buscas completas na validação da issue #16.

@@ -262,6 +262,14 @@ export default function DesignPanel({
           ["straight", "Reta"],
           ["hook", "Com gancho (conferir percurso)"],
         ])}
+        {toggle(
+          "supportWeldedBar",
+          "Barra transversal soldada na ancoragem (NBR 6118 §9.4.2.2)",
+        )}
+        {toggle(
+          "anchorRatioFloor",
+          "Limitar a razão As,req/As,ef ao mínimo de 1,0 (conservador)",
+        )}
         {select("bond", "Condição de aderência", [
           ["poor", "Má aderência"],
           ["good", "Boa aderência justificada"],

@@ -13,6 +13,10 @@ import {
   type Project,
 } from "../domain/model";
 
+const anchorRatioLabel = (v: Record<string, number>) =>
+  v.anchorRatioFloor
+    ? "Razao As,req/As,ef usada (minimo 1,0)"
+    : "Razao As,req/As,ef usada (sem piso)";
 export function piecePoints(p: Piece): [number, number][] {
   const g = p.geometry;
   return [
@@ -383,6 +387,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
         ["As suspensao", v.suspensionRequired, "mm2"],
         ["fbd", v.fbd, "MPa"],
         ["lb basico", v.lb, "mm"],
+        ["alfa da ancoragem no suporte", v.anchorAlpha, ""],
+        [anchorRatioLabel(v), v.anchorRatio, ""],
         ["lb necessario", v.anchorRequired, "mm"],
       ] as [string, number | undefined, string][])
         line(`${label} = ${beamNum(val)} ${val === undefined ? "" : unit}`, 9);
@@ -463,6 +469,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       ["As suspensao", v.suspensionRequired, "mm2"],
       ["fbd", v.fbd, "MPa"],
       ["lb basico", v.lb, "mm"],
+      ["alfa da ancoragem no suporte", v.anchorAlpha, ""],
+      [anchorRatioLabel(v), v.anchorRatio, ""],
       ["lb necessario", v.anchorRequired, "mm"],
       ...(c.method === "strut"
         ? [

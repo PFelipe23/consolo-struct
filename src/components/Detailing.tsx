@@ -322,6 +322,22 @@ function Detailing({
                   <option value="hook">Gancho de 90°</option>
                 </select>
               </label>
+              <label className="design-toggle">
+                <input
+                  type="checkbox"
+                  checked={piece.design.supportWeldedBar}
+                  onChange={(e) =>
+                    update({
+                      ...piece,
+                      design: {
+                        ...piece.design,
+                        supportWeldedBar: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                Barra transversal soldada na ancoragem (NBR 6118 §9.4.2.2)
+              </label>
               {piece.design.supportAnchor === "straight" ? (
                 <NumericField
                   label="Penetração do tirante"
