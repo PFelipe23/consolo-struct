@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   calculate,
+  cantileverBeamModel,
   materialProperties,
   minimumFlexuralSteel,
   strutTieModel,
@@ -14,7 +15,7 @@ import {
   exampleProject,
   fingerprint,
 } from "../src/domain/model";
-import { shortFixture } from "./fixtures";
+import { cantileverFixture, shortFixture } from "./fixtures";
 const c = (p: ReturnType<typeof newPiece>, id: string) =>
   calculate(p).checks.find((x) => x.id === id)!;
 describe("Referências independentes", () => {
@@ -229,12 +230,17 @@ describe("Limites, combinações e rastreabilidade", () => {
     p.geometry.loadOffset += 1e-6;
     expect(calculate(p).combinations[0].classification).toBe("short");
   });
-  it("a/d=1 é calculável; acima disso bloqueia", () => {
+  it("a/d=1 é calculável; acima de 2 bloqueia", () => {
     const p = newPiece(1);
     p.geometry.length = 600;
     p.geometry.loadOffset = tieLayout(p).d;
     expect(calculate(p).status).not.toBe("unsupported");
+    // Issue #6: 1 < a/d ≤ 2 is now calculated as a cantilever beam.
     p.geometry.loadOffset += 1e-6;
+    expect(calculate(p).status).not.toBe("unsupported");
+    expect(calculate(p).combinations[0].method).toBe("beam");
+    p.geometry.length = 800;
+    p.geometry.loadOffset = 2 * tieLayout(p).d + 1e-6;
     expect(calculate(p).status).toBe("unsupported");
   });
   it.each(["fatigue", "transverseForce", "transverseEccentricity"] as const)(
@@ -390,5 +396,284 @@ describe("Contato e ancoragem frontal", () => {
     const check = c(p, "weldForce");
     expect(check.demand).toBeCloseTo(1.15 * area(1, 16) * (500 / 1.15), 10);
     expect(check.status).toBe("fail");
+  });
+});
+describe("Viga em balanço, 1 < a/d ≤ 2 (issue #6)", () => {
+  // Values computed by hand in the issue; the engine keeps full precision.
+  const close = (value: number | undefined, expected: number) => {
+    expect(value).not.toBeUndefined();
+    expect(Math.abs(value! - expected) / Math.abs(expected)).toBeLessThan(1e-4);
+  };
+  const only = (p: ReturnType<typeof newPiece>) => calculate(p).combinations[0];
+  const find = (p: ReturnType<typeof newPiece>, id: string) =>
+    calculate(p).checks.find((x) => x.id === id);
+  it("caso A reproduz esforços, flexão, cisalhamento, estribos e costura", () => {
+    const p = cantileverFixture();
+    expect(tieLayout(p).dPrime).toBeCloseTo(41.3, 10);
+    const c = only(p),
+      v = c.values;
+    expect(c.classification).toBe("cantilever");
+    expect(c.method).toBe("beam");
+    close(v.ratio, 1.3939);
+    close(v.vertical, 252000);
+    close(v.horizontal, 40320);
+    close(v.beam_moment, 127.665e6);
+    close(v.beam_kmd, 0.15435);
+    close(v.beam_kx, 0.25248);
+    close(v.beam_kz, 0.89901);
+    close(v.beam_flexSteel, 910.55);
+    close(v.beam_horizontalSteel, 92.74);
+    close(v.tieModel, 1003.29);
+    close(v.tieRequired, 1003.29);
+    close(v.beam_shearLimit, 547890);
+    close(v.beam_reducedShearLimit, 367090);
+    close(v.beam_stirrupSpacingLimit, 215.22);
+    close(v.beam_stirrupRateRequired * 1000, 1795.37);
+    close(v.beam_stirrupRateMinimum * 1000, 347.58);
+    close(v.beam_stirrupRate * 1000, 1795.37);
+    close(v.beam_transverseRequired, 1077.22);
+    close(v.beam_stitchRate, 1.1188);
+    close(v.beam_stitchRequired, 267.54);
+    expect(find(p, "beamDomain")!.status).toBe("pass");
+    expect(find(p, "beamShear")!.status).toBe("pass");
+    expect(find(p, "beamStitch")!.demand).toBeCloseTo(v.beam_stitchRequired, 8);
+    expect(find(p, "beamSkin")).toBeUndefined();
+  });
+  it("caso B reprova por cisalhamento e reduz smáx", () => {
+    const p = cantileverFixture({ vertical: 350000 });
+    const v = only(p).values;
+    close(v.vertical, 588000);
+    close(v.horizontal, 94080);
+    close(v.beam_moment, 297.886e6);
+    close(v.beam_kmd, 0.36014);
+    close(v.beam_kx, 0.76168);
+    close(v.beam_kz, 0.69533);
+    close(v.beam_flexSteel, 2746.99);
+    close(v.beam_horizontalSteel, 216.38);
+    close(v.beam_shearLimit, 547890);
+    close(v.beam_stirrupSpacingLimit, 107.61);
+    const shear = find(p, "beamShear")!;
+    expect(shear.status).toBe("fail");
+    expect(shear.demand).toBe(588000);
+  });
+  it("caso C: domínio inválido deixa As,flex indeterminada, sem número sentinela", () => {
+    // a = 700 mm requires L ≥ 750 mm for the pad to stay inside the corbel.
+    const p = cantileverFixture({
+      vertical: 350000,
+      loadOffset: 700,
+      length: 800,
+    });
+    const r = calculate(p),
+      c = r.combinations[0];
+    expect(r.status).toBe("fail");
+    close(c.values.ratio, 1.9515);
+    close(c.values.beam_kmd, 0.50232);
+    expect(c.values.beam_radicand).toBeLessThan(0);
+    expect(c.values.beam_domainValid).toBe(0);
+    for (const key of ["beam_kx", "beam_flexSteel", "tieModel", "tieRequired"])
+      expect(c.values[key]).toBeUndefined();
+    expect(r.values.tieRequired).toBeUndefined();
+    expect(Object.values(c.values).every(Number.isFinite)).toBe(true);
+    expect(find(p, "beamDomain")!.status).toBe("fail");
+    const tie = find(p, "tie")!;
+    expect(tie.status).toBe("fail");
+    expect(tie.demand).toBeNull();
+    expect(tie.capacity).toBeCloseTo(area(4, 20), 8);
+    expect(find(p, "beamStitch")!.demand).toBeNull();
+  });
+  it("caso D e fronteira h = 600/601 mm: costura até 600 mm, pele em revisão acima", () => {
+    const d = cantileverFixture({
+      height: 700,
+      loadOffset: 1000,
+      length: 1100,
+    });
+    const v = only(d).values;
+    expect(v.ratio).toBeGreaterThan(1);
+    expect(v.ratio).toBeLessThanOrEqual(2);
+    close(v.beam_skinPerFace, 210);
+    close(v.beam_skinTotal, 420);
+    const skin = find(d, "beamSkin")!;
+    expect(skin.status).toBe("review");
+    expect(skin.demand).toBeCloseTo(210, 10);
+    expect(skin.detail).toContain("420");
+    for (const id of ["beamStitch", "stitch", "stitchSpacing", "stitchZone"])
+      expect(find(d, id)).toBeUndefined();
+    const at = (height: number) =>
+      cantileverFixture({ height, loadOffset: 800, length: 900 });
+    expect(find(at(600), "beamStitch")).not.toBeUndefined();
+    expect(find(at(600), "beamSkin")).toBeUndefined();
+    expect(find(at(601), "beamStitch")).toBeUndefined();
+    expect(find(at(601), "beamSkin")!.status).toBe("review");
+  });
+  it("fronteiras de a/d: 1 é consolo curto, 2 é viga em balanço, acima de 2 é unsupported", () => {
+    const at = (ratio: number) => {
+      const p = cantileverFixture({ length: 1000 });
+      p.geometry.loadOffset = ratio * tieLayout(p).d;
+      return p;
+    };
+    expect(calculate(at(1)).combinations[0].classification).toBe("short");
+    expect(calculate(at(1)).combinations[0].method).toBe("strut");
+    expect(calculate(at(1.0001)).combinations[0].method).toBe("beam");
+    expect(calculate(at(1.5)).combinations[0].classification).toBe(
+      "cantilever",
+    );
+    expect(calculate(at(2)).combinations[0].method).toBe("beam");
+    const above = calculate(at(2.0001));
+    expect(above.status).toBe("unsupported");
+    expect(above.reasons).toContain("a/d > 2: fora do domínio de consolo.");
+    expect(above.combinations).toEqual([]);
+  });
+  it.each(["strut", "friction"] as const)(
+    "método %s explícito com a/d > 1 é unsupported e orienta para Automático",
+    (method) => {
+      const p = cantileverFixture();
+      p.design.method = method;
+      const r = calculate(p);
+      expect(r.status).toBe("unsupported");
+      expect(r.reasons.join(" ")).toContain("Automático");
+      expect(r.reasons.join(" ")).not.toContain("a/d > 2");
+    },
+  );
+  it("não gera bielas e tirantes nem complementos de El Debs e não expõe NaN", () => {
+    const p = cantileverFixture();
+    p.design.literatureRecommendations = true;
+    const r = calculate(p),
+      c = r.combinations[0];
+    const ids = c.checks.map((x) => x.id);
+    for (const id of [
+      "strut",
+      "angleMin",
+      "nodeSupport",
+      "ductility",
+      "transverse",
+      "stitch",
+      "lowerStitch",
+      "literatureTip",
+      "literatureConcrete",
+      "literatureStrut",
+    ])
+      expect(ids).not.toContain(id);
+    for (const id of [
+      "tie",
+      "mechanical",
+      "bearing",
+      "anchorage",
+      "cover",
+      "supportRebar",
+      "splitting",
+      "beamDomain",
+      "beamShear",
+      "beamStirrups",
+      "beamStirrupSpacing",
+      "beamStitch",
+      "literatureHorizontal",
+    ])
+      expect(ids).toContain(id);
+    expect(c.checks.find((x) => x.id === "beamLiterature")!.status).toBe("na");
+    expect(
+      Object.keys(c.values).some(
+        (k) =>
+          k.startsWith("stm_") ||
+          k.startsWith("elDebs_") ||
+          ["tieFriction", "tie9062", "tieElDebs", "tau", "asV"].includes(k),
+      ),
+    ).toBe(false);
+    expect(Object.values(r.values).every(Number.isFinite)).toBe(true);
+    expect(JSON.stringify(r)).not.toContain("NaN");
+    // The H ≥ 0,20 V floor is kept as an input-force rule.
+    close(c.values.horizontal, 0.2 * c.values.vertical);
+    expect(r.assumptions.join(" ")).toContain("viga em balanço");
+  });
+  it("estribos: Atransv inclui 0,0015bh e um único estribo compara L com smáx", () => {
+    const p = cantileverFixture();
+    const m = cantileverBeamModel({
+      vertical: 1000,
+      horizontal: 0,
+      a: 500,
+      d: 358.7,
+      dPrime: 41.3,
+      loadHeight: 0,
+      width: 300,
+      height: 400,
+      length: 400,
+      fcd: 30 / 1.4,
+      fy: 500 / 1.15,
+      alphaV2: 0.88,
+      alphaC: 0.85,
+      lambda: 0.8,
+      fctm: 0.3 * 30 ** (2 / 3),
+      fywd: 500 / 1.15,
+      fykTransverse: 500,
+    });
+    expect(m.transverseRequired).toBe(0.0015 * 300 * 400);
+    p.rebar.stirrupCount = 1;
+    const spacing = find(p, "beamStirrupSpacing")!;
+    expect(spacing.demand).toBe(600);
+    expect(spacing.status).toBe("fail");
+    p.rebar.stirrupCount = 20;
+    const many = find(p, "beamStirrupSpacing")!;
+    expect(many.demand).toBeCloseTo((600 - 2 * (25 + 6.3 / 2)) / 19, 10);
+    expect(many.status).toBe("pass");
+    expect(find(p, "beamStirrups")!.capacity).toBeCloseTo(area(40, 6.3), 8);
+  });
+  it("envelope: cada verificação traz a pior combinação", () => {
+    const p = cantileverFixture({ length: 700 });
+    p.design.combinations = [
+      { name: "Horizontal", vertical: 120000, horizontal: 200000, gamma: 1.4 },
+    ];
+    const r = calculate(p);
+    const [principal, horizontal] = r.combinations;
+    expect(principal.values.vertical).toBeGreaterThan(
+      horizontal.values.vertical,
+    );
+    expect(horizontal.values.tieRequired).toBeGreaterThan(
+      principal.values.tieRequired,
+    );
+    expect(r.checks.find((x) => x.id === "beamShear")!.detail).toMatch(
+      /^\[Principal\]/,
+    );
+    expect(r.checks.find((x) => x.id === "tie")!.detail).toMatch(
+      /^\[Horizontal\]/,
+    );
+    expect(r.governingCase).toBe("Horizontal");
+    expect(r.values.stirrupRequired).toBe(
+      Math.max(
+        principal.values.stirrupRequired,
+        horizontal.values.stirrupRequired,
+      ),
+    );
+  });
+  it("envelope com combinação de domínio inválido mantém a armadura indeterminada", () => {
+    const p = cantileverFixture({ length: 700 });
+    p.design.combinations = [
+      { name: "Extrema", vertical: 450000, horizontal: 0, gamma: 1.4 },
+    ];
+    const r = calculate(p);
+    expect(r.combinations[0].values.tieRequired).not.toBeUndefined();
+    expect(r.combinations[1].values.tieRequired).toBeUndefined();
+    expect(r.values.tieRequired).toBeUndefined();
+    expect(r.values.anchorRequired).toBeUndefined();
+    expect(r.governingCase).toBe("Extrema");
+    expect(r.checks.find((x) => x.id === "beamDomain")!.status).toBe("fail");
+  });
+  it("sugestão de armadura atende o modelo e não 'resolve' VRd2 com estribos", () => {
+    const ok = suggestReinforcement(cantileverFixture({ length: 700 }));
+    expect(ok.changed).toBe(true);
+    for (const id of [
+      "tie",
+      "beamDomain",
+      "beamShear",
+      "beamStirrups",
+      "beamStirrupSpacing",
+      "beamStitch",
+    ])
+      expect(ok.result.checks.find((x) => x.id === id)!.status).toBe("pass");
+    const shear = cantileverFixture({ vertical: 350000, length: 700 });
+    const failed = suggestReinforcement(shear);
+    expect(failed.changed).toBe(false);
+    expect(failed.piece).toBe(shear);
+    expect(failed.result.checks.find((x) => x.id === "beamShear")!.status).toBe(
+      "fail",
+    );
   });
 });
