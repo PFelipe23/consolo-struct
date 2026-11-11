@@ -117,7 +117,9 @@ export default function Viewport({
   useEffect(() => {
     const editable = (target: EventTarget | null) =>
       target instanceof Element &&
-      !!target.closest("input,textarea,select,[contenteditable],[role=dialog]");
+      !!target.closest(
+        "input,textarea,select,.ribbon,[contenteditable],[role=dialog]",
+      );
     const keydown = (e: KeyboardEvent) => {
       if (editable(e.target) || document.querySelector("[role=dialog]")) return;
       if (e.code === "Space") {

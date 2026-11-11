@@ -41,6 +41,26 @@ Para experimentar uma falha conhecida, no exemplo Curto-ELU reduza a ancoragem d
 
 A vista 3D e suas armaduras são representações esquemáticas, não análise resistente espacial nem detalhamento executivo. As setas mostram ações de entrada da combinação Principal, sem escala de intensidade. A câmera não altera os dados de cálculo.
 
+### Configurações
+
+A aba superior **Configurações**, após **Documentação**, centraliza os acessos abaixo. Ela pertence à faixa de ferramentas (ribbon), independentemente das abas de documentos. Abri-la preserva o documento ativo, a peça selecionada, os resultados e o histórico de desfazer/refazer.
+
+| Grupo             | Disponível agora                                                                               | Em breve (itens desabilitados)                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência dos acessos em Exibir e na barra superior | Preferências gerais                                              |
+| Desenho           | **Cotas**, **Armaduras**, **Cargas** e **Grade**, sincronizados com Exibir                     | Cores, espessuras e estilo de cotas                              |
+| Modelo 3D         | —                                                                                              | Preferências de visualização e câmera padrão                     |
+| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades                   | Padrões gerais de dimensionamento                                |
+| Detalhamento      | —                                                                                              | Padrões de apresentação, textos, cotas e identificação de barras |
+
+O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os efeitos e limites atuais de cada vista, sem nova persistência; elas não configuram o desenho de detalhamento. O atalho de critérios abre os **dados da peça selecionada**, não preferências globais. Os acessos anteriores em Início, Modelo, Exibir e Documentação continuam disponíveis.
+
+Itens **Em breve** são informativos, não executam ações nem salvam configurações. Não há formulário de preferências futuras nem botão Salvar/Aplicar. Nenhum critério ou resultado de engenharia é alterado por abrir esta aba.
+
+Capturas da aba: [tema claro](images/configuracoes-claro.png) e [tema escuro](images/configuracoes-escuro.png).
+
+Na lista de abas do ribbon, use as setas esquerda/direita, `Home` e `End` para navegar, e `Tab` para alcançar os controles. O estado dos controles funcionais é indicado visualmente e por tecnologia assistiva; os itens futuros são anunciados como desabilitados e ficam fora da sequência de foco. Em janelas estreitas, as abas e os grupos têm rolagem horizontal; o painel de Configurações também recebe foco por `Tab` e pode ser rolado com as setas esquerda/direita para consultar os grupos futuros.
+
 ## 5. Detalhar e exportar
 
 Em **Detalhamento**, escolha **Somente este consolo** ou **Todos os consolos**, confira revisão, notas, camadas e armaduras. A quantidade multiplica o quadro de aço. Tirante duplo significa duas camadas na mesma face, não consolos nas duas faces do pilar.

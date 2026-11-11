@@ -30,6 +30,10 @@ import {
   Table2,
   Workflow,
   BookOpen,
+  Camera,
+  Palette,
+  Type,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,7 +42,8 @@ export type RibbonTab =
   | "Início"
   | "Modelo"
   | "Exibir"
-  | "Documentação";
+  | "Documentação"
+  | "Configurações";
 export type Action =
   | "new"
   | "open"
@@ -80,20 +85,47 @@ export type Action =
   | "details"
   | "pieces";
 type Tool = {
+  kind: "action";
+  id: string;
   action: Action;
   label: string;
   icon: LucideIcon;
   large?: boolean;
   tip?: string;
+  pressed?: boolean;
 };
-type Group = { label: string; tools: Tool[] };
+type FutureTool = {
+  kind: "future";
+  id: string;
+  label: string;
+  icon: LucideIcon;
+};
+type Group = {
+  id?: string;
+  label: string;
+  description?: string;
+  tools: (Tool | FutureTool)[];
+};
+type SettingsGroup = Group & { id: string; description: string };
 const tool = (
   action: Action,
   label: string,
   icon: LucideIcon,
   large = false,
   tip?: string,
-): Tool => ({ action, label, icon, large, tip });
+): Tool => ({ kind: "action", id: action, action, label, icon, large, tip });
+const future = (id: string, label: string, icon: LucideIcon): FutureTool => ({
+  kind: "future",
+  id,
+  label,
+  icon,
+});
+const drawing = [
+  tool("dimensions", "Cotas", Ruler),
+  tool("steel", "Armaduras", Workflow),
+  tool("forces", "Cargas", ArrowDownToLine),
+  tool("grid", "Grade", Grid2X2),
+];
 const modeling = [
   tool("geometry", "Geometria", Ruler),
   tool("loads", "Ações", ArrowDownToLine),
@@ -149,8 +181,64 @@ export default function Ribbon({
     "Modelo",
     "Exibir",
     "Documentação",
+    "Configurações",
   ];
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const settings: SettingsGroup[] = [
+    {
+      id: "general",
+      label: "Geral / Aparência",
+      description: "Aplicativo · aparência",
+      tools: [
+        { ...tool("theme", "Tema escuro", Moon), pressed: dark },
+        future("general-preferences", "Preferências gerais", SlidersHorizontal),
+      ],
+    },
+    {
+      id: "drawing",
+      label: "Desenho",
+      description: "Vista · elementos do desenho",
+      tools: [
+        ...drawing,
+        future("drawing-colors", "Cores", Palette),
+        future("drawing-widths", "Espessuras", PencilLine),
+        future("drawing-dimensions", "Estilo de cotas", Ruler),
+      ],
+    },
+    {
+      id: "three",
+      label: "Modelo 3D",
+      description: "Visualização · itens futuros",
+      tools: [
+        future("three-display", "Preferências de visualização", Box),
+        future("three-camera", "Câmera padrão", Camera),
+      ],
+    },
+    {
+      id: "design",
+      label: "Dimensionamento",
+      description: "Padrões futuros e dados da peça",
+      tools: [
+        future(
+          "design-defaults",
+          "Padrões gerais de dimensionamento",
+          SlidersHorizontal,
+        ),
+        tool("design", "Critérios da peça selecionada", SlidersHorizontal),
+      ],
+    },
+    {
+      id: "detailing",
+      label: "Detalhamento",
+      description: "Apresentação · itens futuros",
+      tools: [
+        future("detailing-display", "Padrões de apresentação", Layers3),
+        future("detailing-text", "Textos", Type),
+        future("detailing-dimensions", "Cotas do detalhamento", Ruler),
+        future("detailing-bars", "Identificação de barras", Tag),
+      ],
+    },
+  ];
   const groups: Record<RibbonTab, Group[]> = {
     Arquivo: [
       {
@@ -246,12 +334,7 @@ export default function Ribbon({
       },
       {
         label: "Elementos do desenho",
-        tools: [
-          tool("dimensions", "Cotas", Ruler),
-          tool("steel", "Armaduras", Workflow),
-          tool("forces", "Cargas", ArrowDownToLine),
-          tool("grid", "Grade", Grid2X2),
-        ],
+        tools: drawing,
       },
       {
         label: "Painéis",
@@ -299,6 +382,7 @@ export default function Ribbon({
         ],
       },
     ],
+    Configurações: settings,
   };
   return (
     <div className="ribbon">
@@ -335,34 +419,63 @@ export default function Ribbon({
         <span className="ribbon-version">CONSOLOSTRUCT 0.7 · DETALHAMENTO</span>
       </div>
       <div
-        className="ribbon-panel"
+        className={`ribbon-panel ${tab === "Configurações" ? "settings-panel" : ""}`}
         id="ribbon-panel"
         role="tabpanel"
         aria-labelledby={`ribbon-${tabs.indexOf(tab)}`}
+        tabIndex={tab === "Configurações" ? 0 : undefined}
       >
         {groups[tab].map((group) => (
           <section
             className="ribbon-group"
-            key={group.label}
+            key={group.id ?? group.label}
             aria-label={group.label}
+            aria-describedby={
+              group.description ? `settings-${group.id}-description` : undefined
+            }
           >
+            {group.description && (
+              <p
+                className="ribbon-group-description"
+                id={`settings-${group.id}-description`}
+              >
+                {group.description}
+              </p>
+            )}
             <div className="ribbon-tools">
-              {group.tools.map((t) => (
-                <button
-                  key={t.action}
-                  className={`ribbon-tool ${t.large ? "large" : "small"} ${active[t.action] ? "selected" : ""}`}
-                  aria-label={t.label}
-                  aria-pressed={
-                    t.action in active ? !!active[t.action] : undefined
-                  }
-                  disabled={t.action === "delete" && !canDelete}
-                  title={t.tip ?? t.label}
-                  onClick={() => onAction(t.action)}
-                >
-                  <t.icon size={t.large ? 27 : 17} strokeWidth={1.5} />
-                  <span>{t.label}</span>
-                </button>
-              ))}
+              {group.tools.map((t) =>
+                t.kind === "future" ? (
+                  <button
+                    key={t.id}
+                    className="ribbon-tool small ribbon-future"
+                    disabled
+                  >
+                    <t.icon size={17} strokeWidth={1.5} aria-hidden="true" />
+                    <span>{t.label}</span>
+                    <span className="ribbon-future-status">Em breve</span>
+                  </button>
+                ) : (
+                  <button
+                    key={t.id}
+                    className={`ribbon-tool ${t.large ? "large" : "small"} ${(t.pressed ?? active[t.action]) ? "selected" : ""}`}
+                    aria-label={t.label}
+                    aria-pressed={
+                      t.pressed ??
+                      (t.action in active ? !!active[t.action] : undefined)
+                    }
+                    disabled={t.action === "delete" && !canDelete}
+                    title={t.tip ?? t.label}
+                    onClick={() => onAction(t.action)}
+                  >
+                    <t.icon
+                      size={t.large ? 27 : 17}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span>{t.label}</span>
+                  </button>
+                ),
+              )}
             </div>
             <div className="ribbon-group-label">{group.label}</div>
           </section>
