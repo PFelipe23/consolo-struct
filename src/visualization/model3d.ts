@@ -2,6 +2,11 @@ import { number, type GeometryKey, type Piece } from "../domain/model";
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
 import { bottomDepth, bottomReach, concreteProfile } from "../domain/profile";
+import {
+  beamArrangementActive,
+  beamBarPositions,
+  beamLayout,
+} from "../detailing/beam";
 
 /** World coordinates in mm: X = corbel length, Y = width, Z = up. */
 export type Point3 = [number, number, number];
@@ -23,7 +28,8 @@ export interface Load3D {
   value: number;
 }
 export interface SteelPath {
-  id: "N1" | "N2" | "N3";
+  /** N4: positive bars of the beam arrangement (detailing only, not editable in the inspector). */
+  id: "N1" | "N2" | "N3" | "N4";
   points: Point3[];
   diameter: number;
 }
@@ -203,8 +209,31 @@ export function buildSceneModel(p: Piece): SceneModel {
     0,
     Math.min(q.supportAnchorLength, g.columnWidth - g.cover),
   );
+  // Beam arrangement: axes through the bend vertices of the detailed bars (arcs omitted).
+  const beam = beamArrangementActive(p) ? beamLayout(p) : null;
+  if (beam) {
+    for (const bar of beam.top)
+      for (const v of beamBarPositions(p, bar.count, bar.diameter))
+        steel.push({
+          id: "N1",
+          diameter: bar.diameter,
+          points: bar.vertices.map((pt) => [pt.x, v - side, -pt.y] as Point3),
+        });
+    for (const v of beamBarPositions(
+      p,
+      beam.bottom.count,
+      beam.bottom.diameter,
+    ))
+      steel.push({
+        id: "N4",
+        diameter: beam.bottom.diameter,
+        points: beam.bottom.vertices.map(
+          (pt) => [pt.x, v - side, -pt.y] as Point3,
+        ),
+      });
+  }
   // Axes of N1 only: no inferred bends or executable anchorage geometry.
-  for (const row of rows) {
+  for (const row of beam ? [] : rows) {
     const edge = side - g.cover - r.stirrupDiameter - r.tieDiameter / 2;
     for (let i = 0; i < row.count; i++) {
       const y = row.count === 1 ? 0 : -edge + (2 * edge * i) / (row.count - 1);

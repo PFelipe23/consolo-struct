@@ -6,6 +6,7 @@ import { cachedDetails, requestDetails } from "../detailing/service";
 import type { Piece, Project } from "../domain/model";
 import { number } from "../domain/model";
 import { NumericField } from "./NumericField";
+import { beamArrangementActive } from "../detailing/beam";
 import {
   drawingDxf,
   drawingPdf,
@@ -269,24 +270,33 @@ function Detailing({
                   })
                 }
               />
-              {piece.design.frontAnchor === "loop" && (
-                <NumericField
-                  label="D interno da alça principal"
-                  unit="cm"
-                  factor={10}
-                  min={0}
-                  max={3000}
-                  value={piece.design.loopInternalDiameter}
-                  onChange={(v) =>
-                    update({
-                      ...piece,
-                      design: { ...piece.design, loopInternalDiameter: v },
-                    })
-                  }
-                />
+              {beamArrangementActive(piece) && (
+                <p className="detail-tip">
+                  Armado como viga (Configurações › Detalhamento): tirante e
+                  armadura positiva com dobras de 90° nas duas extremidades; as
+                  dobras seguem lb,nec e o contorno da peça.
+                </p>
               )}
+              {piece.design.frontAnchor === "loop" &&
+                !beamArrangementActive(piece) && (
+                  <NumericField
+                    label="D interno da alça principal"
+                    unit="cm"
+                    factor={10}
+                    min={0}
+                    max={3000}
+                    value={piece.design.loopInternalDiameter}
+                    onChange={(v) =>
+                      update({
+                        ...piece,
+                        design: { ...piece.design, loopInternalDiameter: v },
+                      })
+                    }
+                  />
+                )}
               {piece.design.tieLayers > 1 &&
-                piece.design.frontAnchor === "loop" && (
+                piece.design.frontAnchor === "loop" &&
+                !beamArrangementActive(piece) && (
                   <NumericField
                     label="D interno da alça na 2ª camada"
                     unit="cm"
@@ -365,24 +375,52 @@ function Detailing({
               <div className="section-label section-spaced">
                 ARMADURAS COMPLEMENTARES
               </div>
-              <label className="detail-checkbox">
-                <input
-                  type="checkbox"
-                  checked={piece.detailing.mounting}
-                  onChange={(e) => patch({ mounting: e.target.checked })}
-                />{" "}
-                Porta-estribos inferior (2 barras)
-              </label>
-              {piece.detailing.mounting && (
-                <NumericField
-                  label="Bitola do porta-estribos"
-                  unit="mm"
-                  min={5}
-                  max={16}
-                  step={0.1}
-                  value={piece.detailing.mountingDiameter}
-                  onChange={(v) => patch({ mountingDiameter: v })}
-                />
+              {beamArrangementActive(piece) ? (
+                <>
+                  <NumericField
+                    label="Barras da armadura positiva"
+                    unit="barras"
+                    min={2}
+                    max={20}
+                    value={piece.detailing.beamBottomCount}
+                    onChange={(v) => patch({ beamBottomCount: v })}
+                  />
+                  <NumericField
+                    label="Bitola da armadura positiva"
+                    unit="mm"
+                    min={5}
+                    max={25}
+                    step={0.1}
+                    value={piece.detailing.beamBottomDiameter}
+                    onChange={(v) => patch({ beamBottomDiameter: v })}
+                  />
+                  <p className="detail-tip">
+                    No modo viga, a armadura positiva substitui o porta-estribos
+                    inferior e não entra como armadura resistente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label className="detail-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={piece.detailing.mounting}
+                      onChange={(e) => patch({ mounting: e.target.checked })}
+                    />{" "}
+                    Porta-estribos inferior (2 barras)
+                  </label>
+                  {piece.detailing.mounting && (
+                    <NumericField
+                      label="Bitola do porta-estribos"
+                      unit="mm"
+                      min={5}
+                      max={16}
+                      step={0.1}
+                      value={piece.detailing.mountingDiameter}
+                      onChange={(v) => patch({ mountingDiameter: v })}
+                    />
+                  )}
+                </>
               )}
               <NumericField
                 label="Quantidade de pinos"

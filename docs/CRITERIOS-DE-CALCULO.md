@@ -304,6 +304,15 @@ Opção por peça (`excessConcrete`, padrão `keep`), em Configurações > Dimen
 - Com recorte aplicado, a nota `excessConcrete` tem estado `review` e informa ângulo e largura da biela, os vértices da face inferior e a área removida. As verificações usam as mesmas dimensões; o peso próprio automático e seu centroide passam a usar a seção recortada.
 - Estribos verticais, costuras e porta-estribos seguem a face recortada com o mesmo cobrimento (distância mínima à poligonal da face). Desenhos, modelo 3D, DXF/SVG e quantitativos de volume usam o mesmo perfil.
 
+### Detalhamento “Armado como viga”
+
+Opção de detalhamento por peça (`detailing.barArrangement`, padrão `consolo`), em Configurações > Detalhamento > Armado como viga. Disponível somente com `excessConcrete: keep`.
+
+- Não altera o cálculo: o modelo, as verificações e o resultado são os mesmos do modo `consolo`, inclusive o tipo de ancoragem frontal declarado no cálculo.
+- Tirante (negativa): em cada camada, barra superior de `x = −(P − c − φ/2)` a `x = L − c − φ/2`, com dobras de 90° (mandril da tabela 9.1) descendo no suporte e na ponta. A perna reta de cada extremidade é `max(8φ; lb,nec − trecho reto − arco)`, com `lb,nec` igual ao exigido na verificação de ancoragem no suporte. No suporte o trecho reto conta a partir da face do pilar; na ponta, a partir da borda interna da placa de apoio (`a − ℓplaca/2`). A perna da ponta termina acima da face inferior com cobrimento, e a do suporte dentro da altura h.
+- Positiva: `n` barras inferiores de bitola φp (padrão 2 × 10 mm) a `c + φestribo + φp/2` da face inferior, seguindo a face inclinada, por dentro das pernas do tirante, com dobras de 90° subindo nas duas extremidades até abaixo da primeira camada do tirante. `lb,nec,p = max(α·lb,p; 0,3lb,p; 10φp; 100)`, com `lb,p = lb·φp/φ` e α = 0,7 quando o cobrimento lateral ≥ 3φp (senão 1,0). Não é computada como armadura resistente e substitui o porta-estribos.
+- Quando a perna necessária não cabe, a perna é limitada ao contorno e o detalhamento registra `beam-top-anchor` (impeditiva) ou `beam-bottom-anchor` (conferir). Em todos os casos registra `beam-review`, porque a NBR 9062 §7.3.3.6–7 prevê alça ou barra transversal soldada na ponta de consolos.
+
 ## Durabilidade
 
 Cobrimentos nominais de referência: 25/30/40/50 mm para CAA I/II/III/IV; classes mínimas C20/C25/C30/C40. Verifica-se também cobrimento ≥φ e dag ≤1,2c. Redução de 5 mm só mediante opção explícita de controle de qualidade e processo compatível; não se acumulam automaticamente outras reduções especiais.
