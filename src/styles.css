@@ -2065,7 +2065,8 @@ kbd {
   border-bottom: 1px solid var(--border);
   padding: 10px 0;
 }
-.strut-limit-control {
+.strut-limit-control,
+.material-safety-control {
   margin: 10px 0;
   padding: 10px;
   border: 1px solid var(--border);
@@ -2086,6 +2087,24 @@ kbd {
 .strut-limit-warning {
   padding-left: 8px;
   border-left: 3px solid var(--accent);
+}
+.material-safety-control select {
+  width: 100%;
+}
+.material-safety-control p {
+  margin: 8px 0;
+}
+.material-safety-control small {
+  display: block;
+  color: var(--muted);
+}
+.material-safety-warning {
+  margin: 8px 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--accent);
+}
+.material-safety-warning ul {
+  padding-left: 16px;
 }
 .design-panel summary {
   cursor: pointer;

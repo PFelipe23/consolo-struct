@@ -235,6 +235,11 @@ export const ribbonCommands = {
     SlidersHorizontal,
     "Configurar o critério da biela da peça selecionada; mantém o padrão conservador e não muda outras peças",
   ),
+  materialSafety: command(
+    "Coeficientes dos materiais da peça selecionada",
+    SlidersHorizontal,
+    "Editar γc e γs da peça selecionada e conferir o par de referência do processo de produção",
+  ),
 };
 export type Action = keyof typeof ribbonCommands;
 export const ribbonTabs = [
@@ -414,6 +419,7 @@ export const ribbonGroups: Record<RibbonTab, Group[]> = {
         ),
         tool("design"),
         tool("strutLimit"),
+        tool("materialSafety"),
       ],
     },
     {

@@ -32,6 +32,27 @@ describe("Geometria em unidades canônicas", () => {
   });
 });
 describe("Arquivos e invalidação dos resultados", () => {
+  it("abre projeto antigo com os coeficientes padrão sem mudar a versão", () => {
+    const original = exampleProject();
+    const legacy = JSON.parse(JSON.stringify(original));
+    for (const p of legacy.pieces) {
+      delete p.design.gammaC;
+      delete p.design.gammaS;
+    }
+    const decoded = decodeProject(JSON.stringify(legacy));
+    expect(decoded.schemaVersion).toBe(4);
+    for (const p of decoded.pieces) {
+      expect(p.design.gammaC).toBe(1.4);
+      expect(p.design.gammaS).toBe(1.15);
+    }
+    expect(decoded).toEqual(original);
+  });
+  it("preserva coeficientes próprios de cada peça ao salvar e reabrir", () => {
+    const project = exampleProject();
+    project.pieces[0].design.gammaC = 1.3;
+    project.pieces[0].design.gammaS = 1.1;
+    expect(decodeProject(JSON.stringify(project))).toEqual(project);
+  });
   it("preserva todos os parâmetros no round-trip JSON", () => {
     const p = exampleProject();
     expect(decodeProject(JSON.stringify(p))).toEqual(p);

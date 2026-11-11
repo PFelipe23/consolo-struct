@@ -40,6 +40,7 @@ import Viewport, { type ViewportHandle } from "./components/Viewport";
 import Ribbon, { type Action, type RibbonTab } from "./components/Ribbon";
 import { ribbonCommands } from "./components/ribbonCommands";
 import StrutLimitControl from "./components/StrutLimitControl";
+import MaterialSafetyControl from "./components/MaterialSafetyControl";
 import PanelResizer from "./components/PanelResizer";
 import Inspector from "./components/Inspector";
 import ProjectBrowser from "./components/ProjectBrowser";
@@ -102,6 +103,7 @@ type Modal =
   | "about"
   | "delete"
   | "strutLimit"
+  | "materialSafety"
   | null;
 type History = { past: Project[]; present: Project; future: Project[] };
 
@@ -533,6 +535,9 @@ export default function App() {
     switch (a) {
       case "strutLimit":
         setModal("strutLimit");
+        break;
+      case "materialSafety":
+        setModal("materialSafety");
         break;
       case "new": {
         setForm({
@@ -1147,19 +1152,21 @@ export default function App() {
             <Dialog.Title>
               {modal === "strutLimit"
                 ? "Limite da biela da peça selecionada"
-                : modal === "project" || modal === "newProject"
-                  ? "Dados do projeto"
-                  : modal === "piece"
-                    ? "Identificação da peça"
-                    : modal === "export"
-                      ? "Exportar projeto"
-                      : modal === "delete"
-                        ? "Excluir este consolo?"
-                        : "Conheça o ConsoloStruct"}
+                : modal === "materialSafety"
+                  ? "Coeficientes dos materiais da peça selecionada"
+                  : modal === "project" || modal === "newProject"
+                    ? "Dados do projeto"
+                    : modal === "piece"
+                      ? "Identificação da peça"
+                      : modal === "export"
+                        ? "Exportar projeto"
+                        : modal === "delete"
+                          ? "Excluir este consolo?"
+                          : "Conheça o ConsoloStruct"}
             </Dialog.Title>
             <Dialog.Description>
-              {modal === "strutLimit"
-                ? `Peça ${p.name} · ${p.description}. As alterações entram no histórico e ficam salvas no arquivo do projeto; não são aplicadas às outras peças.`
+              {modal === "strutLimit" || modal === "materialSafety"
+                ? `Peça ${p.name} · ${p.description}. As alterações entram em Desfazer/Refazer. Use Salvar projeto para guardar os valores no arquivo.`
                 : modal === "export"
                   ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
                   : modal === "about"
@@ -1338,6 +1345,23 @@ export default function App() {
                 <p>
                   Alterar o critério torna resultados anteriores desatualizados.
                   Use Calcular para conferir a nova revisão.
+                </p>
+                <div className="modal-actions">
+                  <Dialog.Close className="button">Concluir</Dialog.Close>
+                </div>
+              </>
+            )}
+            {modal === "materialSafety" && (
+              <>
+                <MaterialSafetyControl
+                  piece={p}
+                  onChange={(patch) =>
+                    updatePiece({ ...p, design: { ...p.design, ...patch } })
+                  }
+                />
+                <p>
+                  Os valores afetam somente a peça selecionada. Use Calcular
+                  para conferir a nova revisão após editar.
                 </p>
                 <div className="modal-actions">
                   <Dialog.Close className="button">Concluir</Dialog.Close>

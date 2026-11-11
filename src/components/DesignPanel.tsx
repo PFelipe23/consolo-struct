@@ -1,5 +1,7 @@
 import { NumericField } from "./NumericField";
 import StrutLimitControl from "./StrutLimitControl";
+import MaterialSafetyControl from "./MaterialSafetyControl";
+import { coefficientText } from "../domain/materialSafety";
 import type { Piece } from "../domain/model";
 import type { DesignSettings } from "../domain/design";
 
@@ -89,11 +91,10 @@ export default function DesignPanel({
           ["characteristic", "Características: aplicar γf × γn"],
           ["design", "De cálculo: já incluem γf e γn"],
         ])}
-        {select("production", "Processo de produção", [
-          ["precast", "Pré-moldado"],
-          ["factory", "Pré-fabricado (controle de fábrica)"],
-          ["cast", "Moldado no local"],
-        ])}
+        <MaterialSafetyControl
+          piece={p}
+          onChange={(patch) => update({ ...p, design: { ...q, ...patch } })}
+        />
         {toggle("permanentPredominant", "Ação permanente predominante")}
         {num("gammaN", "Coeficiente adicional mínimo γn", "", 1, 1.2, 3)}
         {select("loadType", "Introdução da carga", [
@@ -123,8 +124,9 @@ export default function DesignPanel({
         )}
         {toggle("includeSelfWeight", "Acrescentar peso próprio (25 kN/m³)")}
         <small>
-          γc = 1,40 · γs = 1,15. Combinações excepcionais não são modeladas. H
-          de compressão favorável é desconsiderado.
+          γc = {coefficientText(q.gammaC ?? 1.4)} · γs ={" "}
+          {coefficientText(q.gammaS ?? 1.15)}. Combinações excepcionais não são
+          modeladas. H de compressão favorável é desconsiderado.
         </small>
       </details>
       <details open>

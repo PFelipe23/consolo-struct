@@ -64,13 +64,13 @@ A vista 3D e suas armaduras são representações esquemáticas, não análise r
 
 A aba superior **Configurações**, após **Documentação**, centraliza os acessos abaixo. Ela pertence à faixa de ferramentas (ribbon), independentemente das abas de documentos. Abri-la preserva o documento ativo, a peça selecionada, os resultados e o histórico de desfazer/refazer.
 
-| Grupo             | Disponível agora                                                                                                        | Em breve (itens desabilitados)                                   |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência do acesso na barra superior                                        | Preferências gerais                                              |
-| Desenho           | **Mostrar cotas**, **Mostrar armaduras**, **Mostrar cargas** e **Mostrar grade**, sincronizados com Exibir              | Cores, espessuras e estilo de cotas                              |
-| Modelo 3D         | —                                                                                                                       | Preferências de visualização e câmera padrão                     |
-| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo das propriedades, e **Limite da biela da peça selecionada** | Padrões gerais de dimensionamento                                |
-| Detalhamento      | —                                                                                                                       | Padrões de apresentação, textos, cotas e identificação de barras |
+| Grupo             | Disponível agora                                                                                                                                                             | Em breve (itens desabilitados)                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Geral / Aparência | **Tema escuro**, com o mesmo estado e a persistência do acesso na barra superior                                                                                             | Preferências gerais                                              |
+| Desenho           | **Mostrar cotas**, **Mostrar armaduras**, **Mostrar cargas** e **Mostrar grade**, sincronizados com Exibir                                                                   | Cores, espessuras e estilo de cotas                              |
+| Modelo 3D         | —                                                                                                                                                                            | Preferências de visualização e câmera padrão                     |
+| Dimensionamento   | **Critérios da peça selecionada**, atalho ao painel Cálculo, **Limite da biela da peça selecionada** e **Coeficientes dos materiais da peça selecionada**, para editar γc/γs | Padrões gerais de dimensionamento                                |
+| Detalhamento      | —                                                                                                                                                                            | Padrões de apresentação, textos, cotas e identificação de barras |
 
 O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os efeitos e limites atuais de cada vista, sem nova persistência; elas não configuram o desenho de detalhamento. O atalho de critérios abre os **dados da peça selecionada**, não preferências globais. Os comandos de edição ficam em Modelo e as alternâncias de desenho também continuam em Exibir; Início mantém os oito atalhos do fluxo principal.
 
@@ -91,6 +91,16 @@ A escolha altera imediatamente **somente a peça selecionada** e entra em Desfaz
 Alternativas aplicadas à biela geram a pendência **Conferir**, com os limites escolhido e padrão na memória, PDF e cálculo auditável. Elas não aprovam o projeto por si só. Se mudar a introdução da carga e o critério atual se tornar incompatível, escolha uma opção válida; o programa não troca o critério silenciosamente. Consulte a [tabela de limites e o alcance das referências](CRITERIOS-DE-CALCULO.md#critério-selecionável-do-limite-da-biela).
 
 Capturas do controle: [tema claro](images/limite-biela-claro.png), [tema escuro](images/limite-biela-escuro.png) e [janela estreita](images/limite-biela-janela-estreita.png). Os [resultados de validação da contribuição](VALIDACAO-LIMITE-BIELA.md) registram o baseline e os limites dos testes.
+
+#### Coeficientes dos materiais da peça
+
+Em **Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada**, confira o nome da peça e edite γc e γs (números entre 1 e 2, com vírgula ou ponto decimal). Enter ou a saída do campo confirma uma entrada válida. O diálogo mostra os valores adotados, o par de referência do processo e cada valor abaixo da referência, quando houver. Os mesmos controles ficam nas propriedades **Cálculo**, junto ao processo de produção; a aba **Materiais** também exibe os valores atuais.
+
+Os padrões são 1,40/1,15, inclusive ao abrir arquivos antigos. Selecionar **Pré-fabricado (controle de fábrica)** mostra a referência 1,30/1,10 e mantém os valores que já estavam adotados. A redução é uma permissão informada na issue #2, atribuída à NBR 9062:2017 §8.1, e uma decisão do responsável técnico. O programa não certifica o enquadramento do elemento. Para pré-moldado e moldado no local, a referência é 1,40/1,15.
+
+As mudanças afetam somente a peça selecionada e entram em **Desfazer/Refazer**. **Concluir** ou Esc fecha a janela e devolve o foco ao comando; não desfaz edições já confirmadas. Use **Calcular** para conferir a nova revisão e **Salvar projeto** para guardar os valores no arquivo. A memória, o PDF e o cálculo auditável registram adotados e referências; coeficientes abaixo da referência geram **Conferir**, sem aprovação automática nem bloqueio da edição. Os desenhos de detalhamento incluem os coeficientes alterados e essas pendências nas notas.
+
+Capturas e verificações: [validação da issue #2](VALIDACAO-COEFICIENTES-MATERIAIS.md).
 
 Na lista de abas do ribbon, use as setas esquerda/direita, `Home` e `End` para navegar, e `Tab` para alcançar os controles. O estado dos controles funcionais é indicado visualmente e por tecnologia assistiva; os itens futuros são anunciados como desabilitados e ficam fora da sequência de foco. Em janelas estreitas, as abas e os grupos têm rolagem horizontal; o painel de Configurações também recebe foco por `Tab` e pode ser rolado com as setas esquerda/direita para consultar os grupos futuros.
 

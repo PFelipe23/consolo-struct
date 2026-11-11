@@ -10,6 +10,7 @@ import {
 import { type Bar, type Detail } from "./model";
 import { pinCenters } from "./model";
 import { reactionGeometry } from "../domain/theory";
+import { coefficientText, materialSafety } from "../domain/materialSafety";
 
 export type Layer =
   | "FORMAS"
@@ -941,12 +942,22 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   }
   bottom = cardY + rowH + 15;
   text(10, bottom, "NOTAS DE DETALHAMENTO E CONFERÊNCIA", 2.8);
+  const safety = materialSafety(q);
   const notes = [
     `Responsável técnico: ${project.author || "não informado"}. Cliente: ${project.client || "não informado"}. Revisão ${s.revision || "R00"}.`,
     "Desenhos soltos: geometria e formas em centímetros; diâmetros das barras em milímetros. CAD em escala real 1:1; PDF em escala nominal 1:10 ao imprimir a 100%.",
     "Mandris e ganchos: NBR 6118:2026, 9.4.2.3, tabelas 9.1 e 9.2 e 9.4.6.1. Estribos representados pela projeção nominal com fechamento de ganchos fora do plano.",
     "Comprimentos C somam trechos retos e arcos no eixo; não se obtêm por soma de cotas externas. O excedente de arredondamento fica na ponta reta. Densidade do aço: 7 850 kg/m³.",
     "Não cortar ou dobrar barras a partir da escala da tela. Conferir as cotas, o ajuste das armaduras no suporte e as tolerâncias do fabricante.",
+    ...(safety.gammaC !== 1.4 || safety.gammaS !== 1.15
+      ? [
+          `Materiais: γc = ${coefficientText(safety.gammaC)}; γs = ${coefficientText(safety.gammaS)}. Referência para ${safety.reference.label}: γc = ${coefficientText(safety.reference.gammaC)}; γs = ${coefficientText(safety.reference.gammaS)}. Decisão do responsável técnico; o programa não certifica o enquadramento do elemento. NBR 9062:2017 §8.1; NBR 6118:2026.`,
+        ]
+      : []),
+    ...safety.below.map(
+      (value) =>
+        `CONFERIR: ${value.symbol} adotado ${coefficientText(value.adopted)}, abaixo da referência ${coefficientText(value.reference)}.`,
+    ),
     ...d.issues.map(
       (v) =>
         `${v.severity === "error" ? "CORRIGIR" : "CONFERIR"}: ${v.message}`,

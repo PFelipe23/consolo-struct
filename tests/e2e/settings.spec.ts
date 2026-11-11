@@ -93,6 +93,7 @@ test("aba única, grupos, relação com o painel e navegação completa por tecl
     "Mostrar grade",
     "Critérios da peça selecionada",
     "Limite da biela da peça selecionada",
+    "Coeficientes dos materiais da peça selecionada",
   ]) {
     await page.keyboard.press("Tab");
     await expect(
@@ -106,7 +107,7 @@ test("aba única, grupos, relação com o painel e navegação completa por tecl
   await page.keyboard.press("Shift+Tab");
   await expect(
     panel(page).getByRole("button", {
-      name: "Limite da biela da peça selecionada",
+      name: "Coeficientes dos materiais da peça selecionada",
     }),
   ).toBeFocused();
 });

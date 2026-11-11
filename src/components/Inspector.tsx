@@ -1,5 +1,6 @@
 import DesignPanel from "./DesignPanel";
 import { ribbonCommands } from "./ribbonCommands";
+import { coefficientText } from "../domain/materialSafety";
 import { memo } from "react";
 import {
   ChevronDown,
@@ -255,9 +256,10 @@ function Inspector({
             <div className="inspector-tip">
               <Info size={15} />
               <p>
-                ELU normal: γc = 1,40 e γs = 1,15. Tirante: CA-25 (250), CA-50
-                (500) ou CA-60 (600 MPa). Aço transversal e exposição na aba
-                Cálculo.
+                Adotados: γc = {coefficientText(p.design.gammaC ?? 1.4)} e γs ={" "}
+                {coefficientText(p.design.gammaS ?? 1.15)}. Tirante: CA-25
+                (250), CA-50 (500) ou CA-60 (600 MPa). Aço transversal e
+                exposição na aba Cálculo.
               </p>
             </div>
           </>
