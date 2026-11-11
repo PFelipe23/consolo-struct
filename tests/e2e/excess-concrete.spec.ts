@@ -87,13 +87,11 @@ test("fechar mantém a edição imediata; desfazer/refazer e reabrir preservam a
   await expect(page.locator(".excess-concrete-outline")).toHaveCount(0);
   await page.keyboard.press("Control+Shift+z");
   await expect(page.locator(".excess-concrete-outline").first()).toBeAttached();
-  await page
-    .getByLabel("Abrir arquivo de projeto")
-    .setInputFiles({
-      name: "recorte.consolo.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(project)),
-    });
+  await page.getByLabel("Abrir arquivo de projeto").setInputFiles({
+    name: "recorte.consolo.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
   const reopened = await openSettings(page);
   await expect(option(reopened, "Remover concreto excedente")).toBeChecked();
   await page.keyboard.press("Escape");
