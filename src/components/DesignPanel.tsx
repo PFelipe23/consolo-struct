@@ -1,4 +1,5 @@
 import { NumericField } from "./NumericField";
+import StrutLimitControl from "./StrutLimitControl";
 import type { Piece } from "../domain/model";
 import type { DesignSettings } from "../domain/design";
 
@@ -99,6 +100,10 @@ export default function DesignPanel({
           ["direct", "Direta"],
           ["indirect", "Indireta: suspensão integral"],
         ])}
+        <StrutLimitControl
+          piece={p}
+          onChange={(value) => set("strutLimit", value)}
+        />
         {select("horizontalMode", "Origem de H", [
           ["estimated", "Apoio + H adicional informado"],
           ["analysis", "Resultante total de análise"],

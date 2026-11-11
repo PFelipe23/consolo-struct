@@ -13,6 +13,11 @@ import {
   stirrupLayout,
   upperStitchLayout,
 } from "./theory";
+import {
+  strutLimitAllowed,
+  strutLimitCriteria,
+  strutLimitValue,
+} from "./strutLimit";
 
 export const ENGINE_VERSION = "0.4.0";
 export const POLICY = "LC-ELU-2026.2";
@@ -765,18 +770,36 @@ function calculateCase(
         ),
       );
   } else if (method === "strut") {
+    const selected = q.strutLimit ?? "fcd2";
+    const criterion = strutLimitCriteria[selected];
+    const limit = strutLimitValue(selected, q.loadType, m);
     add(
       check(
         "strut",
         "Compressão da biela",
         model.strutStress,
-        Math.min(m.fcd2, (q.loadType === "direct" ? 1 : 0.85) * m.fcd),
+        limit,
         "MPa",
-        "σb = (Vd + Hd·e/a)/(beff·c2·senθ); fcd2 = 0,60 αv2 fcd",
-        refs.stm,
-        "Modelo geométrico de Araújo, largura efetiva limitada à largura do apoio; abertura lateral limitada a 1:2. Limite conservador para biela fissurada.",
+        selected === "fcd2"
+          ? "σb = (Vd + Hd·e/a)/(beff·c2·senθ); fcd2 = 0,60 αv2 fcd"
+          : `σb = (Vd + Hd·e/a)/(beff·c2·senθ) ≤ ${criterion.formula}`,
+        selected === "fcd2" ? refs.stm : `${refs.stm}; ${criterion.reference}`,
+        selected === "fcd2"
+          ? "Modelo geométrico de Araújo, largura efetiva limitada à largura do apoio; abertura lateral limitada a 1:2. Limite conservador para biela fissurada."
+          : `Modelo geométrico de Araújo, largura efetiva limitada à largura do apoio; abertura lateral limitada a 1:2. Critério selecionado: ${criterion.label}. Aplicado somente à verificação strut.`,
       ),
     );
+    if (selected !== "fcd2") {
+      const standard = strutLimitValue("fcd2", q.loadType, m);
+      add(
+        note(
+          "strutLimitCriterion",
+          "Critério alternativo do limite da biela",
+          `${criterion.label}: limite escolhido ${number(limit, 4)} MPa; padrão fcd2 ${number(standard, 4)} MPa. Critério menos conservador: exige conferência complementar e não aprova o projeto por si só. Nós, apoio, escoamento prévio, inclinação e biela complementar de El Debs mantêm seus limites originais.`,
+          criterion.reference,
+        ),
+      );
+    }
     add(
       check(
         "angleMin",
@@ -1555,6 +1578,11 @@ export function calculate(p: Piece): CalculationResult {
     return base;
   }
   const unsupported: string[] = [];
+  const selectedStrutLimit = q.strutLimit ?? "fcd2";
+  if (!strutLimitAllowed(selectedStrutLimit, q.loadType))
+    unsupported.push(
+      `O critério de limite da biela “${strutLimitCriteria[selectedStrutLimit].label}” só é permitido com carga ${selectedStrutLimit === "direct100" ? "direta" : "indireta"}. Altere o critério ou a introdução da carga.`,
+    );
   if (ratio > 2) unsupported.push("a/d > 2: fora do domínio de consolo.");
   else if (ratio > 1 && q.method !== "auto")
     unsupported.push(

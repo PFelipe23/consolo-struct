@@ -3,8 +3,16 @@ import { z } from "zod";
 // mm, N, MPa throughout. Physical data are explicit; reductions are never inferred.
 const length = z.number().finite().min(0).max(10000);
 const diameter = z.number().finite().min(5).max(25);
+export const strutLimitSchema = z.enum([
+  "fcd2",
+  "fcd3",
+  "indirect085",
+  "direct100",
+]);
+export type StrutLimit = z.infer<typeof strutLimitSchema>;
 export const designSchema = z.object({
   method: z.enum(["auto", "strut", "friction"]),
+  strutLimit: strutLimitSchema.default("fcd2"),
   // Missing fields preserve the policy of projects saved before 0.7.
   literatureRecommendations: z.boolean().default(false),
   reactionPosition: z
@@ -85,6 +93,7 @@ export function defaultDesign(
 ): DesignSettings {
   return {
     method: "auto",
+    strutLimit: "fcd2",
     literatureRecommendations: true,
     reactionPosition: "specified",
     production: "precast",
