@@ -2,6 +2,7 @@ import {
   area,
   fingerprint,
   geometryErrors,
+  number,
   pieceSchema,
   volume,
   type Piece,
@@ -9,6 +10,7 @@ import {
 import {
   elDebsSimplified,
   reactionGeometry,
+  stirrupLayout,
   upperStitchLayout,
 } from "./theory";
 
@@ -29,8 +31,8 @@ export interface Check {
 }
 export interface CaseResult {
   name: string;
-  classification: "short" | "veryShort";
-  method: "strut" | "friction";
+  classification: "short" | "veryShort" | "cantilever";
+  method: "strut" | "friction" | "beam";
   checks: Check[];
   values: Record<string, number>;
   status: "pass" | "fail" | "review";
@@ -48,6 +50,19 @@ export interface CalculationResult {
   values: Record<string, number>;
   assumptions: string[];
 }
+export const classificationLabels: Record<
+  CaseResult["classification"],
+  string
+> = {
+  short: "Curto",
+  veryShort: "Muito curto",
+  cantilever: "Viga em balanço",
+};
+export const methodLabels: Record<CaseResult["method"], string> = {
+  strut: "Bielas e tirantes",
+  friction: "Atrito-cisalhamento",
+  beam: "Flexão e cisalhamento (Modelo I)",
+};
 const refs = {
   safety: "NBR 6118:2026 §22.2; NBR 9062:2017 §7.3.1.1; política LC-ELU-2026.2",
   geometry: "NBR 9062:2017 §7.3.3",
@@ -57,6 +72,15 @@ const refs = {
   anchor: "NBR 6118:2026 §9.3.2, §9.4.2.4–6; NBR 9062:2017 §7.3.5.5",
   literature:
     "El Debs, trecho fornecido §3.5.1, pp.125–130, eqs.3.18–3.27 e quadro 3.2; complemento bibliográfico",
+  // Cited by GN Corbel for 1 < a/d ≤ 2; not yet checked against the ABNT texts.
+  beamFlexure:
+    "NBR 6118 §17.2 e §14.6.4.3 (citadas no GN Corbel; conferência pendente)",
+  beamShear:
+    "NBR 6118 §17.4.2.2, Modelo I; NBR 9062:2017 §7.3.7.2 (citadas no GN Corbel; conferência pendente)",
+  beamSpacing: "NBR 6118 §18.3.3.2 (citada no GN Corbel; conferência pendente)",
+  beamStitch:
+    "NBR 9062:2017 §7.3.6, por analogia ao consolo curto (citada no GN Corbel; conferência pendente)",
+  beamSkin: "NBR 6118 §17.3.5.2.3 (citada no GN Corbel; conferência pendente)",
 };
 const supportRatios = {
   dry: 0.8,
@@ -261,6 +285,98 @@ export function minimumFlexuralSteel(
     required: Math.max(0.0015 * b * h, (stress * b * compressionDepth) / m.fyd),
   };
 }
+/** Cantilever beam model for 1 < a/d ≤ 2 (issue #6), parity with GN Corbel.
+ * N, mm, MPa; no intermediate rounding. A negative discriminant leaves the
+ * flexural steel indeterminate (NaN), never a sentinel number. */
+export function cantileverBeamModel({
+  vertical,
+  horizontal,
+  a,
+  d,
+  dPrime,
+  loadHeight,
+  width: b,
+  height: h,
+  length,
+  fcd,
+  fy,
+  alphaV2,
+  alphaC,
+  lambda,
+  fctm,
+  fywd,
+  fykTransverse,
+}: {
+  vertical: number;
+  horizontal: number;
+  a: number;
+  d: number;
+  dPrime: number;
+  loadHeight: number;
+  width: number;
+  height: number;
+  length: number;
+  fcd: number;
+  fy: number;
+  alphaV2: number;
+  alphaC: number;
+  lambda: number;
+  fctm: number;
+  fywd: number;
+  fykTransverse: number;
+}) {
+  // 1. Forces: the lever arm of Hd includes the bearing height (e = d′ + hap).
+  const shear = vertical;
+  const moment = vertical * a + horizontal * (loadHeight + dPrime);
+  // 2. Simple bending with the rectangular stress block.
+  const kmd = moment / (b * d * d * fcd);
+  const radicand = alphaC ** 2 * lambda ** 2 - 2 * alphaC * lambda ** 2 * kmd;
+  const valid = radicand >= 0;
+  const kx = valid
+    ? (alphaC * lambda - Math.sqrt(radicand)) / (alphaC * lambda ** 2)
+    : NaN;
+  const kz = 1 - (lambda * kx) / 2;
+  const flexSteel = moment / (kz * d * fy);
+  const horizontalSteel = horizontal / fy;
+  // 3. Shear, NBR 6118 Model I with Vc = 0.
+  const shearLimit = 0.27 * alphaV2 * fcd * b * d;
+  const concreteShear = 0;
+  const steelShear = shear - concreteShear;
+  const stirrupRateRequired = steelShear / (0.9 * d * fywd);
+  const stirrupRateMinimum = 0.2 * (fctm / fykTransverse) * b;
+  const stirrupRate = Math.max(stirrupRateRequired, stirrupRateMinimum);
+  const transverseMinimum = 0.0015 * b * h;
+  const transverseRequired = Math.max(stirrupRate * length, transverseMinimum);
+  const reducedShearLimit = 0.67 * shearLimit;
+  const spacingLimit =
+    shear <= reducedShearLimit
+      ? Math.min(0.6 * d, 300)
+      : Math.min(0.3 * d, 200);
+  return {
+    shear,
+    moment,
+    kmd,
+    // radicand ≥ 0 ⇔ kmd ≤ αc/2 (same condition, expressed as a limit).
+    kmdLimit: alphaC / 2,
+    radicand,
+    valid,
+    kx,
+    kz,
+    flexSteel,
+    horizontalSteel,
+    steelModel: flexSteel + horizontalSteel,
+    shearLimit,
+    reducedShearLimit,
+    concreteShear,
+    steelShear,
+    stirrupRateRequired,
+    stirrupRateMinimum,
+    stirrupRate,
+    transverseMinimum,
+    transverseRequired,
+    spacingLimit,
+  };
+}
 function calculateCase(
   p: Piece,
   load: { name: string; vertical: number; horizontal: number; gamma: number },
@@ -275,13 +391,18 @@ function calculateCase(
     d = layout.d,
     dp = layout.dPrime,
     ratio = a / d;
-  const classification = ratio <= 0.5 ? "veryShort" : "short";
+  const classification =
+    ratio <= 0.5 ? "veryShort" : ratio <= 1 ? "short" : "cantilever";
+  // calculate() only reaches 1 < a/d ≤ 2 with method "auto".
   const method =
     q.method === "auto"
       ? classification === "veryShort"
         ? "friction"
-        : "strut"
+        : classification === "short"
+          ? "strut"
+          : "beam"
       : q.method;
+  const isBeam = method === "beam";
   const m = materialProperties(
     p.materials.fck,
     p.materials.fyk,
@@ -350,8 +471,28 @@ function calculateCase(
   });
   const elDebsAs = elDebs.tieForce / fy;
   const literatureDomain = ratio >= 0.4 && ratio <= 1;
-  const asModel =
-    method === "strut"
+  const beam = cantileverBeamModel({
+    vertical,
+    horizontal,
+    a,
+    d,
+    dPrime: dp,
+    loadHeight: q.bearingHeight,
+    width: b,
+    height: g.height,
+    length: g.length,
+    fcd: m.fcd,
+    fy,
+    alphaV2: m.alphaV2,
+    alphaC: m.alphaC,
+    lambda: m.lambda,
+    fctm: m.fctm,
+    fywd: m.fywd,
+    fykTransverse: q.fykTransverse,
+  });
+  const asModel = isBeam
+    ? beam.steelModel
+    : method === "strut"
       ? Math.max(
           model.tieForce / fy,
           classification === "short" ? shortNormAs : 0,
@@ -365,6 +506,7 @@ function calculateCase(
     p.materials.fyk,
   );
   const asMechanical = ((0.04 * p.materials.fck) / p.materials.fyk) * b * d;
+  // In the beam branch an indeterminate As,flex (NaN) keeps tieRequired indeterminate.
   const tieRequired = Math.max(
     asModel,
     minFlex.required,
@@ -457,6 +599,17 @@ function calculateCase(
           ? 5
           : 8
         : 6;
+  // Beam branch (1 < a/d ≤ 2): face reinforcement depends on h; N3 pitch is the drawn pitch.
+  const beamStitchApplies = g.height <= 600;
+  const beamStitchRate = Math.max((0.4 * tieRequired) / d, 0.0015 * b);
+  const beamStitchRequired = beamStitchApplies ? beamStitchRate * zone : 0;
+  const beamStitchBars = stitchLayout.levels.filter(
+    (y) => y >= dp - 1e-9 && y <= stitchLayout.end + 1e-9,
+  ).length;
+  const beamStitchProvided = 2 * area(beamStitchBars, r.stitchDiameter);
+  const beamSkinPerFace = 0.001 * b * g.height;
+  const beamStirrupSpacing =
+    r.stirrupCount > 1 ? stirrupLayout(p).pitch : g.length;
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
   if (q.literatureRecommendations) {
@@ -472,18 +625,19 @@ function calculateCase(
         "Recomendação bibliográfica ativada. Em H por análise, o par informado é conservado e a insuficiência é indicada; em H estimado, aplica-se o piso sem somá-lo novamente.",
       ),
     );
-    add(
-      check(
-        "literatureTip",
-        "Altura da ponta complementar (El Debs)",
-        g.height / 2,
-        g.tipHeight,
-        "mm",
-        "h2 ≥ h/2",
-        refs.literature,
-        "Recomendação mais restritiva que h2 ≥ h/2−a2 da NBR 9062. Não substitui a verificação normativa.",
-      ),
-    );
+    if (!isBeam)
+      add(
+        check(
+          "literatureTip",
+          "Altura da ponta complementar (El Debs)",
+          g.height / 2,
+          g.tipHeight,
+          "mm",
+          "h2 ≥ h/2",
+          refs.literature,
+          "Recomendação mais restritiva que h2 ≥ h/2−a2 da NBR 9062. Não substitui a verificação normativa.",
+        ),
+      );
     if (literatureDomain) {
       add(
         check(
@@ -511,16 +665,29 @@ function calculateCase(
     }
   }
   add(
-    check(
-      "tie",
-      "Armadura do tirante",
-      tieRequired,
-      asTie,
-      "mm²",
-      "As,req = max(As,modelo; As,min,6118; 0,04 fck/fyk · b d; As,ElDebs se habilitado no domínio)",
-      "NBR 9062 §7.3.5; NBR 6118 §17.3.5.2.1 e §22.5.1.4.1",
-      "A área inclui a parcela horizontal e as armaduras mínimas.",
-    ),
+    isBeam
+      ? check(
+          "tie",
+          "Armadura do tirante",
+          tieRequired,
+          asTie,
+          "mm²",
+          "As,req = max(As,flex + Hd/fy; As,min,6118; 0,04 fck/fyk · b d)",
+          `${refs.beamFlexure}; NBR 6118 §17.3.5.2.1`,
+          beam.valid
+            ? "Viga em balanço: flexão simples com Msd = Vd·a + Hd·(hapoio + d′) mais a tração horizontal Hd/fy, e as armaduras mínimas. Sem os termos de El Debs, próprios do consolo curto."
+            : "Viga em balanço: domínio da flexão inválido (radicando negativo). As,flex sem solução; a armadura necessária é indeterminada.",
+        )
+      : check(
+          "tie",
+          "Armadura do tirante",
+          tieRequired,
+          asTie,
+          "mm²",
+          "As,req = max(As,modelo; As,min,6118; 0,04 fck/fyk · b d; As,ElDebs se habilitado no domínio)",
+          "NBR 9062 §7.3.5; NBR 6118 §17.3.5.2.1 e §22.5.1.4.1",
+          "A área inclui a parcela horizontal e as armaduras mínimas.",
+        ),
   );
   add(
     check(
@@ -533,7 +700,71 @@ function calculateCase(
       "NBR 9062 §7.3.5.2",
     ),
   );
-  if (method === "strut") {
+  if (isBeam) {
+    const domainCheck = check(
+      "beamDomain",
+      "Domínio da flexão (viga em balanço)",
+      beam.kmd,
+      beam.kmdLimit,
+      "",
+      "kmd = Msd/(b d² fcd); radicando = αc²λ² − 2αcλ²·kmd ≥ 0 ⇔ kmd ≤ αc/2",
+      refs.beamFlexure,
+      beam.valid
+        ? "Flexão simples com bloco retangular: kx = (αcλ − √radicando)/(αcλ²), kz = 1 − λkx/2, As,flex = Msd/(kz d fy)."
+        : "Radicando negativo: a seção não equilibra Msd em flexão simples. As,flex fica indeterminada (sem solução).",
+    );
+    // The status follows the discriminant itself, not the rounding tolerance of check().
+    domainCheck.status = beam.valid ? "pass" : "fail";
+    add(domainCheck);
+    add(
+      check(
+        "beamShear",
+        "Compressão diagonal do concreto (viga em balanço)",
+        beam.shear,
+        beam.shearLimit,
+        "N",
+        "Vsd ≤ VRd2 = 0,27 αv2 fcd b d",
+        refs.beamShear,
+        "Modelo I. Aumentar estribos não resolve esta verificação; exige mais seção ou concreto.",
+      ),
+    );
+    add(
+      check(
+        "beamStirrups",
+        "Estribos verticais (viga em balanço)",
+        beam.transverseRequired,
+        stirrupProvided,
+        "mm²",
+        "Vc = 0; (asw/s)nec = Vsd/(0,9 d fywd); (asw/s)mín = 0,2 fctm/fywk · b; Atransv,nec = max(máx((asw/s)nec; (asw/s)mín)·L; 0,0015 b h)",
+        refs.beamShear,
+        "N3 conta estribos fechados, com dois ramos, distribuídos ao longo do comprimento L do consolo. A parcela do concreto é desconsiderada nesta faixa de a/d.",
+      ),
+    );
+    add(
+      check(
+        "beamStirrupSpacing",
+        "Espaçamento máximo dos estribos (viga em balanço)",
+        beamStirrupSpacing,
+        beam.spacingLimit,
+        "mm",
+        "Vsd ≤ 0,67 VRd2: smáx = min(0,6d; 300); senão smáx = min(0,3d; 200)",
+        refs.beamSpacing,
+        r.stirrupCount > 1
+          ? "Passo real dos eixos de N3, o mesmo do detalhamento."
+          : "Com um único estribo, compara-se o comprimento L do consolo com smáx.",
+      ),
+    );
+    if (q.literatureRecommendations)
+      add(
+        note(
+          "beamLiterature",
+          "Complementos de El Debs na viga em balanço",
+          "Os complementos de El Debs são do consolo curto e não se aplicam a 1 < a/d ≤ 2: não entram tirante, costura, estribos, altura da ponta nem limites do concreto. Mantém-se apenas o piso de força de entrada Hd ≥ 0,20 Vd.",
+          refs.literature,
+          "na",
+        ),
+      );
+  } else if (method === "strut") {
     add(
       check(
         "strut",
@@ -620,63 +851,93 @@ function calculateCase(
       "Distribuição linear de compressão e contato integral (eapoio ≤ c/6). Inclui deslocamento da reação e altura de H, somados antes de verificar o núcleo. Não admite tração de contato nem ganho por confinamento; o aparelho exige verificação própria.",
     ),
   );
-  add(
-    check(
-      "stitch",
-      "Costura nos 2/3 d superiores",
-      stitchEnvelope,
-      stitchProvided,
-      "mm²",
-      "As,cost = max(r9062·2d/3; 0,0015b·2d/3; 0,4As,tir [curto]; kAsv; 0,5 Vd a/(0,9d fy) se El Debs ativado)",
-      refs.stitch,
-      "N2 conta estribos horizontais fechados, com dois ramos efetivos. k=0,4 curto / 0,5 muito curto: complemento conservador de El Debs.",
-    ),
-  );
-  add(
-    check(
-      "stitchSpacing",
-      "Espaçamento vertical da costura",
-      stitchSpacing,
-      stitchSpacingLimit,
-      "mm",
-      "s = (yúltima−yprimeira)/(n−1) ≤ min(100; a); para n=1, s=2d/3",
-      "NBR 9062 §7.3.3.12",
-      "Espaçamento real dos eixos desenhados, abaixo da última camada do tirante e dentro dos 2/3 d superiores. Não se usa mais zona/n quando o detalhe tem outra distribuição.",
-    ),
-  );
-  add(
-    check(
-      "stitchZone",
-      "Costura cabe abaixo do tirante",
-      stitchLayout.start,
-      stitchLayout.end,
-      "mm",
-      "yprimeira ≤ d′+2d/3",
-      refs.stitch,
-    ),
-  );
-  add(
-    check(
-      "stitchClear",
-      "Espaço livre vertical da costura",
-      Math.max(20, r.stitchDiameter, 0.5 * q.aggregate),
-      stitchSpacing - r.stitchDiameter,
-      "mm",
-      "s−φ ≥ max(20;φ;0,5dag)",
-      "NBR 6118 §18.3.2.2, critério construtivo adotado",
-    ),
-  );
-  add(
-    check(
-      "stitchDiameter",
-      "Diâmetro da costura",
-      r.stitchDiameter,
-      Math.min(b, g.height) / 15,
-      "mm",
-      "φcost ≤ min(b,h)/15",
-      "NBR 9062 §7.3.3.12",
-    ),
-  );
+  if (!isBeam)
+    add(
+      check(
+        "stitch",
+        "Costura nos 2/3 d superiores",
+        stitchEnvelope,
+        stitchProvided,
+        "mm²",
+        "As,cost = max(r9062·2d/3; 0,0015b·2d/3; 0,4As,tir [curto]; kAsv; 0,5 Vd a/(0,9d fy) se El Debs ativado)",
+        refs.stitch,
+        "N2 conta estribos horizontais fechados, com dois ramos efetivos. k=0,4 curto / 0,5 muito curto: complemento conservador de El Debs.",
+      ),
+    );
+  else if (beamStitchApplies)
+    add(
+      check(
+        "beamStitch",
+        "Costura nos 2/3 d superiores (viga em balanço, h ≤ 600 mm)",
+        beamStitchRequired,
+        beamStitchProvided,
+        "mm²",
+        "(As/s)cost = max(0,4 As,tir,nec/d; 0,0015 b); Acost,nec = (As/s)cost · 2d/3",
+        refs.beamStitch,
+        "Critério do consolo curto aplicado por analogia, sobre a armadura necessária do tirante. Sem os termos de área total (0,4 As,ef e literatura) e sem a faixa mínima do terço inferior. Oferta: ramos de N2 cujos eixos desenhados ficam na faixa 2d/3.",
+      ),
+    );
+  else
+    add({
+      id: "beamSkin",
+      label: "Armadura de pele (viga em balanço, h > 600 mm)",
+      status: "review",
+      demand: beamSkinPerFace,
+      capacity: null,
+      utilization: null,
+      unit: "mm²",
+      formula: "As,pele = 0,001 b h por face",
+      reference: refs.beamSkin,
+      detail: `h = ${number(g.height, 0)} mm > 600 mm: não há costura. Armadura de pele necessária ${number(beamSkinPerFace, 2)} mm² por face (${number(2 * beamSkinPerFace, 2)} mm² no total). O ConsoloStruct não tem entrada nem detalhamento de pele; dimensionar e detalhar a pele é responsabilidade do projetista.`,
+    });
+  // Stitch arrangement rules apply whenever N2 is a stitch (not to the skin of h > 600 mm).
+  if (!isBeam || beamStitchApplies) {
+    add(
+      check(
+        "stitchSpacing",
+        "Espaçamento vertical da costura",
+        stitchSpacing,
+        stitchSpacingLimit,
+        "mm",
+        "s = (yúltima−yprimeira)/(n−1) ≤ min(100; a); para n=1, s=2d/3",
+        "NBR 9062 §7.3.3.12",
+        "Espaçamento real dos eixos desenhados, abaixo da última camada do tirante e dentro dos 2/3 d superiores. Não se usa mais zona/n quando o detalhe tem outra distribuição.",
+      ),
+    );
+    add(
+      check(
+        "stitchZone",
+        "Costura cabe abaixo do tirante",
+        stitchLayout.start,
+        stitchLayout.end,
+        "mm",
+        "yprimeira ≤ d′+2d/3",
+        refs.stitch,
+      ),
+    );
+    add(
+      check(
+        "stitchClear",
+        "Espaço livre vertical da costura",
+        Math.max(20, r.stitchDiameter, 0.5 * q.aggregate),
+        stitchSpacing - r.stitchDiameter,
+        "mm",
+        "s−φ ≥ max(20;φ;0,5dag)",
+        "NBR 6118 §18.3.2.2, critério construtivo adotado",
+      ),
+    );
+    add(
+      check(
+        "stitchDiameter",
+        "Diâmetro da costura",
+        r.stitchDiameter,
+        Math.min(b, g.height) / 15,
+        "mm",
+        "φcost ≤ min(b,h)/15",
+        "NBR 9062 §7.3.3.12",
+      ),
+    );
+  }
   if (classification === "veryShort") {
     add(
       check(
@@ -701,18 +962,19 @@ function calculateCase(
       ),
     );
   }
-  add(
-    check(
-      "transverse",
-      "Estribos verticais construtivos",
-      stirrupRequired,
-      stirrupProvided,
-      "mm²",
-      "As,vert ≥ max(0,0015 b h [direta]; 0,2 As,tir [se El Debs ativado])",
-      "NBR 9062 §7.3.7.2",
-      "N3 conta estribos fechados, com dois ramos. Complemento de El Debs p.129(e) quando ativado; N5 de suspensão permanece independente, sem dupla contagem.",
-    ),
-  );
+  if (!isBeam)
+    add(
+      check(
+        "transverse",
+        "Estribos verticais construtivos",
+        stirrupRequired,
+        stirrupProvided,
+        "mm²",
+        "As,vert ≥ max(0,0015 b h [direta]; 0,2 As,tir [se El Debs ativado])",
+        "NBR 9062 §7.3.7.2",
+        "N3 conta estribos fechados, com dois ramos. Complemento de El Debs p.129(e) quando ativado; N5 de suspensão permanece independente, sem dupla contagem.",
+      ),
+    );
   if (q.loadType === "indirect")
     add(
       check(
@@ -1116,6 +1378,117 @@ function calculateCase(
       Object.entries(elDebs).map(([k, v]) => [`elDebs_${k}`, v]),
     ),
   };
+  if (isBeam && !Number.isFinite(tieRequired)) {
+    // check() drops both sides when the demand is not finite; keep the offered side visible.
+    const offered: Record<string, number> = {
+      tie: asTie,
+      beamStitch: beamStitchProvided,
+      anchorage: q.supportAnchorLength,
+      weldForce: q.weldResistancePerBar,
+    };
+    for (const c of checks)
+      if (c.id in offered && c.demand === null) {
+        c.capacity = offered[c.id];
+        if (c.id !== "tie")
+          c.detail = `${c.detail ? `${c.detail} ` : ""}Exigência indeterminada: depende da armadura necessária do tirante, sem solução no domínio inválido da flexão.`;
+      }
+  }
+  if (isBeam) {
+    // Indeterminate quantities (invalid flexural domain) are omitted, never sentinels.
+    // Strut-and-tie, friction and El Debs quantities do not exist in this model.
+    const beamValues: Record<string, number> = {
+      ...m,
+      d,
+      dPrime: dp,
+      a,
+      bearingCenter: reaction.center,
+      reactionShift: reaction.shift,
+      effectiveBearingLength: reaction.effectiveLength,
+      ratio,
+      gammaN,
+      gammaN9062: gn9062,
+      factor,
+      selfWeight,
+      vertical,
+      horizontal,
+      horizontalProvided,
+      horizontalEstimated,
+      horizontalFloor,
+      horizontalFloorAdded: horizontal - horizontalBeforeFloor,
+      bearingEccentricity,
+      bearingStress,
+      rho,
+      tieProvided: asTie,
+      tieRequired,
+      tieModel: asModel,
+      tieMinimumFlexure: minFlex.required,
+      tieMinimumMechanical: asMechanical,
+      minMoment: minFlex.moment,
+      stitchRate: beamStitchApplies ? beamStitchRate : 0,
+      stitchRequired: beamStitchRequired,
+      stitchProvided: beamStitchProvided,
+      ...(beamStitchApplies ? { stitchSpacing, stitchSpacingLimit } : {}),
+      lowerRequired: 0,
+      lowerProvided,
+      stirrupRequired: beam.transverseRequired,
+      stirrupProvided,
+      suspensionRequired,
+      suspensionProvided,
+      splittingRequired,
+      splittingProvided,
+      anchorRequired,
+      lb,
+      anchorAlpha,
+      fbd,
+      confinementRequired,
+      a2,
+      frontClearanceRequired,
+      minCover,
+      literatureEnabled: q.literatureRecommendations ? 1 : 0,
+      literatureDomain: 0,
+      beam_domainValid: beam.valid ? 1 : 0,
+      beam_shear: beam.shear,
+      beam_moment: beam.moment,
+      beam_kmd: beam.kmd,
+      beam_kmdLimit: beam.kmdLimit,
+      beam_radicand: beam.radicand,
+      beam_kx: beam.kx,
+      beam_kz: beam.kz,
+      beam_flexSteel: beam.flexSteel,
+      beam_horizontalSteel: beam.horizontalSteel,
+      beam_shearLimit: beam.shearLimit,
+      beam_reducedShearLimit: beam.reducedShearLimit,
+      beam_concreteShear: beam.concreteShear,
+      beam_steelShear: beam.steelShear,
+      beam_stirrupRateRequired: beam.stirrupRateRequired,
+      beam_stirrupRateMinimum: beam.stirrupRateMinimum,
+      beam_stirrupRate: beam.stirrupRate,
+      beam_transverseMinimum: beam.transverseMinimum,
+      beam_transverseRequired: beam.transverseRequired,
+      beam_stirrupSpacing: beamStirrupSpacing,
+      beam_stirrupSpacingLimit: beam.spacingLimit,
+      beam_stitchApplies: beamStitchApplies ? 1 : 0,
+      ...(beamStitchApplies
+        ? {
+            beam_stitchRate: beamStitchRate,
+            beam_stitchRequired: beamStitchRequired,
+          }
+        : {
+            beam_skinPerFace: beamSkinPerFace,
+            beam_skinTotal: 2 * beamSkinPerFace,
+          }),
+    };
+    return {
+      name: load.name,
+      classification,
+      method,
+      checks,
+      values: Object.fromEntries(
+        Object.entries(beamValues).filter(([, v]) => Number.isFinite(v)),
+      ),
+      status: statusOf(checks),
+    };
+  }
   return {
     name: load.name,
     classification,
@@ -1182,9 +1555,10 @@ export function calculate(p: Piece): CalculationResult {
     return base;
   }
   const unsupported: string[] = [];
-  if (ratio > 1)
+  if (ratio > 2) unsupported.push("a/d > 2: fora do domínio de consolo.");
+  else if (ratio > 1 && q.method !== "auto")
     unsupported.push(
-      "a/d > 1: o elemento deve ser tratado como viga em balanço; não é calculado pelo motor de consolos curtos.",
+      "1 < a/d ≤ 2: os modelos de bielas e tirantes e de atrito-cisalhamento não se aplicam. Selecione o modelo resistente “Automático por a/d” para calcular o elemento como viga em balanço.",
     );
   if (q.fatigue)
     unsupported.push(
@@ -1267,6 +1641,10 @@ export function calculate(p: Piece): CalculationResult {
     base.reasons = unsupported;
     return base;
   }
+  if (ratio > 1)
+    base.assumptions.push(
+      "1 < a/d ≤ 2: elemento calculado como viga em balanço (paridade com o GN Corbel), com Msd = Vd·a + Hd·(hapoio + d′), flexão simples, cisalhamento pelo Modelo I com Vc = 0 e costura (h ≤ 600 mm) ou armadura de pele em revisão (h > 600 mm). Não se aplicam bielas e tirantes nem os complementos de El Debs, exceto o piso Hd ≥ 0,20 Vd. ELS, fissuração e flecha não são verificados. As referências normativas do modelo foram citadas no GN Corbel e aguardam conferência.",
+    );
   const combinations = allLoads.map((load) => calculateCase(p, load));
   if (
     combinations.some((c) =>
@@ -1278,8 +1656,10 @@ export function calculate(p: Piece): CalculationResult {
     ];
     return base;
   }
+  // An omitted tieRequired is indeterminate (beam model, invalid domain) and governs.
+  const tieDemand = (c: CaseResult) => c.values.tieRequired ?? Infinity;
   const governing = combinations.reduce((a, b) =>
-    b.values.tieRequired > a.values.tieRequired ? b : a,
+    tieDemand(b) > tieDemand(a) ? b : a,
   );
   // Envelope each verification independently, never combine V and H from different load cases.
   const checks = new Map<string, Check>();
@@ -1303,8 +1683,12 @@ export function calculate(p: Piece): CalculationResult {
     "suspensionRequired",
     "splittingRequired",
     "anchorRequired",
-  ])
-    values[key] = Math.max(...combinations.map((c) => c.values[key]));
+  ]) {
+    const all = combinations.map((c) => c.values[key]);
+    // Indeterminate in any combination ⇒ indeterminate envelope (key omitted).
+    if (all.some((v) => v === undefined)) delete values[key];
+    else values[key] = Math.max(...all);
+  }
   return {
     ...base,
     combinations,

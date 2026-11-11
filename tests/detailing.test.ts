@@ -9,7 +9,9 @@ import { buildDetail } from "../src/detailing/model";
 import { combineDrawings, pieceDrawing } from "../src/detailing/drawing";
 import { drawingDxf, drawingSvg, steelCsv } from "../src/detailing/exports";
 import { decodeProject, exampleProject } from "../src/domain/model";
-import { shortFixture } from "./fixtures";
+import { stirrupLayout } from "../src/domain/theory";
+import { toCsv, toDxf, toSvg } from "../src/lib/exports";
+import { cantileverFixture, shortFixture } from "./fixtures";
 
 describe("Centro de gravidade das barras e comprimentos de oficina", () => {
   it("alça U inclui duas curvas de 90° sem somar os cantos virtuais", () => {
@@ -196,5 +198,43 @@ describe("Interoperabilidade e arquivos", () => {
     expect(svg).not.toContain("<script>");
     expect(svg).toContain("&lt;script&gt;");
     expect(steelCsv([buildDetail(p)])).toContain("\"'=HYPERLINK");
+  });
+});
+describe("Viga em balanço (1 < a/d ≤ 2)", () => {
+  it("detalha, desenha e exporta sem depender de valores de bielas", () => {
+    for (const p of [
+      cantileverFixture(),
+      cantileverFixture({ vertical: 350000, loadOffset: 700, length: 800 }),
+      cantileverFixture({ height: 700, loadOffset: 1000, length: 1100 }),
+    ]) {
+      const detail = buildDetail(p);
+      expect(detail.result.combinations[0].method).toBe("beam");
+      expect(detail.bars.length).toBeGreaterThan(0);
+      const project = { ...exampleProject(), pieces: [p] };
+      const drawing = pieceDrawing(project, detail);
+      for (const text of [
+        drawingDxf(drawing),
+        drawingSvg(drawing),
+        steelCsv([detail]),
+        toCsv(project),
+        toDxf(p),
+        toSvg(p),
+      ])
+        expect(text).not.toMatch(/NaN|undefined|Infinity/);
+    }
+  });
+  it("o passo de N3 verificado pelo motor é o mesmo do detalhamento", () => {
+    const p = cantileverFixture();
+    p.rebar.stirrupCount = 7;
+    const drawn = buildDetail(p)
+      .bars.filter((b) => b.family === "stirrup")
+      .map((b) => b.locations[0].x);
+    const layout = stirrupLayout(p);
+    expect(drawn).toEqual(layout.positions);
+    expect(drawn[1] - drawn[0]).toBeCloseTo(layout.pitch, 10);
+    const spacing = buildDetail(p).result.checks.find(
+      (c) => c.id === "beamStirrupSpacing",
+    )!;
+    expect(spacing.demand).toBeCloseTo(layout.pitch, 10);
   });
 });

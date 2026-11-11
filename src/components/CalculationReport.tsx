@@ -1,4 +1,10 @@
-import type { CalculationResult, Check } from "../domain/engine";
+import {
+  classificationLabels,
+  methodLabels,
+  type CalculationResult,
+  type CaseResult,
+  type Check,
+} from "../domain/engine";
 import { number } from "../domain/model";
 import { memo } from "react";
 import LazyDetails from "./LazyDetails";
@@ -15,6 +21,80 @@ const statusLabels = {
   review: "Conferir",
   na: "Não aplicável",
 };
+/** Omitted values are indeterminate (beam model, invalid flexural domain), never NaN. */
+const valueText = (value: number | undefined, digits = 3) =>
+  value === undefined || !Number.isFinite(value)
+    ? "indeterminado"
+    : number(value, digits);
+function BeamMemory({ c }: { c: CaseResult }) {
+  const v = c.values;
+  const rows: [string, number | undefined, string][] = [
+    ["Vd", v.vertical / 1000, "kN"],
+    ["Hd", v.horizontal / 1000, "kN"],
+    ["Centro físico do apoio", v.bearingCenter / 10, "cm"],
+    ["a de cálculo", v.a / 10, "cm"],
+    [
+      "H acrescentado pelo piso bibliográfico",
+      v.horizontalFloorAdded / 1000,
+      "kN",
+    ],
+    ["γn aplicado às ações características", v.gammaN, ""],
+    ["fcd", v.fcd, "MPa"],
+    ["fyd adotado", v.fydLimited, "MPa"],
+    ["d′", v.dPrime, "mm"],
+    ["Vsd", v.beam_shear / 1000, "kN"],
+    ["Msd = Vd·a + Hd·(hapoio + d′)", v.beam_moment / 1e6, "kN·m"],
+    ["kmd", v.beam_kmd, ""],
+    ["kmd limite (radicando = 0)", v.beam_kmdLimit, ""],
+    ["kx", v.beam_kx, ""],
+    ["kz", v.beam_kz, ""],
+    ["As,flex", v.beam_flexSteel, "mm²"],
+    ["As,h = Hd/fy", v.beam_horizontalSteel, "mm²"],
+    ["As do modelo", v.tieModel, "mm²"],
+    ["As mínimo de flexão", v.tieMinimumFlexure, "mm²"],
+    ["As mínimo mecânico", v.tieMinimumMechanical, "mm²"],
+    ["VRd2", v.beam_shearLimit / 1000, "kN"],
+    ["0,67·VRd2", v.beam_reducedShearLimit / 1000, "kN"],
+    ["(asw/s) necessário (Vc = 0)", v.beam_stirrupRateRequired * 1000, "mm²/m"],
+    ["(asw/s) mínimo", v.beam_stirrupRateMinimum * 1000, "mm²/m"],
+    ["Atransv necessária", v.beam_transverseRequired, "mm²"],
+    ["smáx dos estribos", v.beam_stirrupSpacingLimit, "mm"],
+    ["Passo real de N3 (ou L com um estribo)", v.beam_stirrupSpacing, "mm"],
+    ...(v.beam_stitchApplies
+      ? ([
+          ["(As/s) da costura", v.beam_stitchRate, "mm²/mm"],
+          ["Costura necessária", v.beam_stitchRequired, "mm²"],
+        ] as [string, number | undefined, string][])
+      : ([
+          ["Armadura de pele por face", v.beam_skinPerFace, "mm²"],
+          ["Armadura de pele total", v.beam_skinTotal, "mm²"],
+        ] as [string, number | undefined, string][])),
+    ["Ancoragem necessária", v.anchorRequired, "mm"],
+  ];
+  return (
+    <>
+      <div className="memory-values">
+        {rows.map(([label, value, unit]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>
+              {valueText(value)} {value === undefined ? "" : unit}
+            </strong>
+          </div>
+        ))}
+      </div>
+      <p className="table-note">
+        Viga em balanço (1 &lt; a/d ≤ 2): flexão simples com bloco retangular e
+        cisalhamento pelo Modelo I, desconsiderando a parcela do concreto. Não
+        se aplicam bielas e tirantes nem os complementos de El Debs do consolo
+        curto; mantém-se apenas o piso Hd ≥ 0,20 Vd, quando ativado. ELS,
+        fissuração e flecha não são verificados.
+        {!v.beam_domainValid &&
+          " Domínio da flexão inválido: As,flex e a armadura necessária do tirante são indeterminadas."}
+      </p>
+    </>
+  );
+}
 function Checks({ checks }: { checks: Check[] }) {
   return (
     <div className="calculation-table-wrap">
@@ -112,7 +192,11 @@ function CalculationReport({
           </div>
           <div>
             <span>Tirante necessário</span>
-            <strong>{number(v.tieRequired / 100, 2)} cm²</strong>
+            <strong>
+              {v.tieRequired === undefined
+                ? "indeterminado"
+                : `${number(v.tieRequired / 100, 2)} cm²`}
+            </strong>
           </div>
           <div>
             <span>Tirante adotado</span>
@@ -135,158 +219,166 @@ function CalculationReport({
               key={i}
               title={
                 <>
-                  {c.name} ·{" "}
-                  {c.classification === "short" ? "Curto" : "Muito curto"} ·{" "}
-                  {c.method === "strut"
-                    ? "Bielas e tirantes"
-                    : "Atrito-cisalhamento"}{" "}
-                  · {resultLabels[c.status]}
+                  {c.name} · {classificationLabels[c.classification]} ·{" "}
+                  {methodLabels[c.method]} · {resultLabels[c.status]}
                 </>
               }
             >
-              {() => (
-                <>
-                  <div className="memory-values">
-                    {[
-                      ["Vd", c.values.vertical / 1000, "kN"],
-                      ["Hd", c.values.horizontal / 1000, "kN"],
-                      [
-                        "Centro físico do apoio",
-                        c.values.bearingCenter / 10,
-                        "cm",
-                      ],
-                      ["a de cálculo", c.values.a / 10, "cm"],
-                      [
-                        "Deslocamento da reação",
-                        c.values.reactionShift / 10,
-                        "cm",
-                      ],
-                      [
-                        "Excentricidade total no contato",
-                        c.values.bearingEccentricity / 10,
-                        "cm",
-                      ],
-                      [
-                        "H acrescentado pelo piso bibliográfico",
-                        c.values.horizontalFloorAdded / 1000,
-                        "kN",
-                      ],
-                      [
-                        "γn aplicado às ações características",
-                        c.values.gammaN,
-                        "",
-                      ],
-                      ["fcd", c.values.fcd, "MPa"],
-                      ["fyd adotado", c.values.fydLimited, "MPa"],
-                      ["d′", c.values.dPrime, "mm"],
-                      ["θ do modelo geométrico", c.values.stm_theta, "°"],
-                      ["z do modelo geométrico", c.values.stm_z, "mm"],
-                      ["As por atrito", c.values.tieFriction, "mm²"],
-                      ["As simplificado 9062", c.values.tie9062, "mm²"],
-                      ["As El Debs", c.values.tieElDebs, "mm²"],
-                      [
-                        "As mínimo de flexão",
-                        c.values.tieMinimumFlexure,
-                        "mm²",
-                      ],
-                      [
-                        "As mínimo mecânico",
-                        c.values.tieMinimumMechanical,
-                        "mm²",
-                      ],
-                      ["Taxa da costura", c.values.stitchRate, "mm²/mm"],
-                      ["Ancoragem necessária", c.values.anchorRequired, "mm"],
-                    ].map(([label, value, unit]) => (
-                      <div key={String(label)}>
-                        <span>{label}</span>
-                        <strong>
-                          {number(Number(value), 3)} {unit}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                  <h4>Comparação dos modelos</h4>
-                  <div className="calculation-table-wrap">
-                    <table
-                      className="calculation-table"
-                      aria-label={`Comparação dos modelos · ${c.name}`}
-                    >
-                      <thead>
-                        <tr>
-                          <th>Modelo / condição</th>
-                          <th>As do tirante</th>
-                          <th>Concreto</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>Geométrico de Araújo · monolítico</td>
-                          <td>
-                            {number(
-                              c.values.stm_tieForce / c.values.fydLimited / 100,
-                              3,
-                            )}{" "}
-                            cm²
-                          </td>
-                          <td>
-                            σb = {number(c.values.stm_strutStress, 3)} MPa
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>NBR 9062 simplificado · 0,5 &lt; a/d ≤ 1</td>
-                          <td>{number(c.values.tie9062 / 100, 3)} cm²</td>
-                          <td>Conferir biela e nós</td>
-                        </tr>
-                        <tr>
-                          <td>El Debs · equilíbrio completo (3.18)</td>
-                          <td>{number(c.values.tieElDebs / 100, 3)} cm²</td>
-                          <td>
-                            σc = {number(c.values.elDebs_strutStress, 3)} MPa
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>El Debs · aproximação 1,2 H (3.19), auxiliar</td>
-                          <td>
-                            {number(
-                              c.values.elDebs_tieForceApprox /
-                                c.values.fydLimited /
-                                100,
-                              3,
-                            )}{" "}
-                            cm²
-                          </td>
-                          <td>Não substitui a altura real de H</td>
-                        </tr>
-                        <tr>
-                          <td>Atrito-cisalhamento · a/d ≤ 0,5</td>
-                          <td>{number(c.values.tieFriction / 100, 3)} cm²</td>
-                          <td>
-                            τ = {number(c.values.tau, 3)} /{" "}
-                            {number(c.values.tauLimit, 3)} MPa
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="table-note">
-                    {c.values.literatureEnabled
-                      ? "Complementos de El Debs ativados."
-                      : "Complementos de El Debs desativados."}{" "}
-                    A comparação não torna aplicável um modelo fora do seu
-                    domínio. A expressão simplificada do concreto, equações
-                    3.22–3.25, usa z = 0,9d, hbie = 0,2d e mantém Hd·dh. Costura
-                    complementar = {number(c.values.stitchLiterature / 100, 3)}{" "}
-                    cm²; estribos complementares ={" "}
-                    {number(c.values.stirrupLiterature / 100, 3)} cm².
-                  </p>
-                  <p className="table-note">
-                    Grandezas dos modelos alternativos são auxiliares; somente o
-                    método identificado acima e seus critérios de envelope
-                    definem esta combinação.
-                  </p>
-                  <Checks checks={c.checks} />
-                </>
-              )}
+              {() =>
+                c.method === "beam" ? (
+                  <>
+                    <BeamMemory c={c} />
+                    <Checks checks={c.checks} />
+                  </>
+                ) : (
+                  <>
+                    <div className="memory-values">
+                      {[
+                        ["Vd", c.values.vertical / 1000, "kN"],
+                        ["Hd", c.values.horizontal / 1000, "kN"],
+                        [
+                          "Centro físico do apoio",
+                          c.values.bearingCenter / 10,
+                          "cm",
+                        ],
+                        ["a de cálculo", c.values.a / 10, "cm"],
+                        [
+                          "Deslocamento da reação",
+                          c.values.reactionShift / 10,
+                          "cm",
+                        ],
+                        [
+                          "Excentricidade total no contato",
+                          c.values.bearingEccentricity / 10,
+                          "cm",
+                        ],
+                        [
+                          "H acrescentado pelo piso bibliográfico",
+                          c.values.horizontalFloorAdded / 1000,
+                          "kN",
+                        ],
+                        [
+                          "γn aplicado às ações características",
+                          c.values.gammaN,
+                          "",
+                        ],
+                        ["fcd", c.values.fcd, "MPa"],
+                        ["fyd adotado", c.values.fydLimited, "MPa"],
+                        ["d′", c.values.dPrime, "mm"],
+                        ["θ do modelo geométrico", c.values.stm_theta, "°"],
+                        ["z do modelo geométrico", c.values.stm_z, "mm"],
+                        ["As por atrito", c.values.tieFriction, "mm²"],
+                        ["As simplificado 9062", c.values.tie9062, "mm²"],
+                        ["As El Debs", c.values.tieElDebs, "mm²"],
+                        [
+                          "As mínimo de flexão",
+                          c.values.tieMinimumFlexure,
+                          "mm²",
+                        ],
+                        [
+                          "As mínimo mecânico",
+                          c.values.tieMinimumMechanical,
+                          "mm²",
+                        ],
+                        ["Taxa da costura", c.values.stitchRate, "mm²/mm"],
+                        ["Ancoragem necessária", c.values.anchorRequired, "mm"],
+                      ].map(([label, value, unit]) => (
+                        <div key={String(label)}>
+                          <span>{label}</span>
+                          <strong>
+                            {number(Number(value), 3)} {unit}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                    <h4>Comparação dos modelos</h4>
+                    <div className="calculation-table-wrap">
+                      <table
+                        className="calculation-table"
+                        aria-label={`Comparação dos modelos · ${c.name}`}
+                      >
+                        <thead>
+                          <tr>
+                            <th>Modelo / condição</th>
+                            <th>As do tirante</th>
+                            <th>Concreto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Geométrico de Araújo · monolítico</td>
+                            <td>
+                              {number(
+                                c.values.stm_tieForce /
+                                  c.values.fydLimited /
+                                  100,
+                                3,
+                              )}{" "}
+                              cm²
+                            </td>
+                            <td>
+                              σb = {number(c.values.stm_strutStress, 3)} MPa
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>NBR 9062 simplificado · 0,5 &lt; a/d ≤ 1</td>
+                            <td>{number(c.values.tie9062 / 100, 3)} cm²</td>
+                            <td>Conferir biela e nós</td>
+                          </tr>
+                          <tr>
+                            <td>El Debs · equilíbrio completo (3.18)</td>
+                            <td>{number(c.values.tieElDebs / 100, 3)} cm²</td>
+                            <td>
+                              σc = {number(c.values.elDebs_strutStress, 3)} MPa
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              El Debs · aproximação 1,2 H (3.19), auxiliar
+                            </td>
+                            <td>
+                              {number(
+                                c.values.elDebs_tieForceApprox /
+                                  c.values.fydLimited /
+                                  100,
+                                3,
+                              )}{" "}
+                              cm²
+                            </td>
+                            <td>Não substitui a altura real de H</td>
+                          </tr>
+                          <tr>
+                            <td>Atrito-cisalhamento · a/d ≤ 0,5</td>
+                            <td>{number(c.values.tieFriction / 100, 3)} cm²</td>
+                            <td>
+                              τ = {number(c.values.tau, 3)} /{" "}
+                              {number(c.values.tauLimit, 3)} MPa
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="table-note">
+                      {c.values.literatureEnabled
+                        ? "Complementos de El Debs ativados."
+                        : "Complementos de El Debs desativados."}{" "}
+                      A comparação não torna aplicável um modelo fora do seu
+                      domínio. A expressão simplificada do concreto, equações
+                      3.22–3.25, usa z = 0,9d, hbie = 0,2d e mantém Hd·dh.
+                      Costura complementar ={" "}
+                      {number(c.values.stitchLiterature / 100, 3)} cm²; estribos
+                      complementares ={" "}
+                      {number(c.values.stirrupLiterature / 100, 3)} cm².
+                    </p>
+                    <p className="table-note">
+                      Grandezas dos modelos alternativos são auxiliares; somente
+                      o método identificado acima e seus critérios de envelope
+                      definem esta combinação.
+                    </p>
+                    <Checks checks={c.checks} />
+                  </>
+                )
+              }
             </LazyDetails>
           ))}
           <h3>Hipóteses e alcance da análise</h3>

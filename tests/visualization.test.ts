@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { newPiece, fingerprint } from "../src/domain/model";
+import { cantileverFixture } from "./fixtures";
 import { buildSceneModel } from "../src/visualization/model3d";
 import {
   corbelGeometry,
@@ -127,5 +128,34 @@ describe("Geometria técnica 3D", () => {
     buildSceneModel(p);
     expect(JSON.stringify(p)).toBe(before);
     expect(fingerprint(p)).toBe(f);
+  });
+});
+describe("Viga em balanço (1 < a/d ≤ 2)", () => {
+  it("monta a cena 3D de uma peça calculada como viga em balanço", () => {
+    const m = buildSceneModel(cantileverFixture());
+    const numbers: number[] = [];
+    JSON.stringify(m, (_k, v) => (typeof v === "number" && numbers.push(v), v));
+    expect(numbers.every(Number.isFinite)).toBe(true);
+    const g = corbelGeometry(m);
+    expect(g.boundingBox!.max.x).toBe(600);
+    expect(meshVolume(g)).toBeGreaterThan(0);
+    const group = createModelGroup(m, {
+      dark: false,
+      rebar: true,
+      dimensions: true,
+      forces: true,
+      grid: true,
+      transparent: true,
+      selectedBar: "N1",
+      lightweight: false,
+    });
+    let bars = 0;
+    group.traverse((o) => {
+      if (o.userData.barId) bars++;
+      expect(o.position.toArray().every(Number.isFinite)).toBe(true);
+    });
+    expect(bars).toBe(m.steel.length);
+    disposeGroup(group);
+    g.dispose();
   });
 });

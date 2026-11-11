@@ -84,7 +84,9 @@ Abra o endereço informado pelo Vite. Após gerar `dist/`, também é possível 
 
 O **motor 0.4.0**, política **LC-ELU-2026.2**, trata o ELU estático local de consolos simples de concreto armado. Os critérios implementados se apoiam nas NBR 6118:2026 e 9062:2017 e nos modelos documentados de Araújo e El Debs. A versão do aplicativo e a do motor são identificações independentes.
 
-O escopo atual não inclui dentes Gerber, consolos duplos/contínuos, `a/d > 1`, análise resistente espacial, fadiga, ELS/fissuração, estrutura global, verificação completa do aparelho de apoio, pinos/chumbadores ou compatibilização integral com a armadura do suporte. As combinações são fornecidas pelo usuário. Há situações que exigem conferência complementar, inclusive no modelo de atrito e em ligações especiais.
+Para `1 < a/d ≤ 2`, o modo automático calcula a peça como viga em balanço (flexão simples e cisalhamento pelo Modelo I, com costura até 600 mm de altura e pele a conferir acima disso), sem ELS, fissuração ou flecha.
+
+O escopo atual não inclui dentes Gerber, consolos duplos/contínuos, `a/d > 2`, análise resistente espacial, fadiga, ELS/fissuração, estrutura global, verificação completa do aparelho de apoio, pinos/chumbadores ou compatibilização integral com a armadura do suporte. As combinações são fornecidas pelo usuário. Há situações que exigem conferência complementar, inclusive no modelo de atrito e em ligações especiais.
 
 O motor distingue atendimento, falha, revisão necessária, entrada inválida e domínio não implementado. O desenho 3D é uma visualização; os [limites do detalhamento](docs/DETALHAMENTO.md) e do modelo resistente continuam aplicáveis. A responsabilidade de projeto e revisão permanece com o profissional habilitado.
 
