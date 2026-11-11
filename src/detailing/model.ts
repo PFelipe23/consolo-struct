@@ -2,6 +2,11 @@ import { calculate, tieLayout, type CalculationResult } from "../domain/engine";
 import { geometryErrors, type Piece } from "../domain/model";
 import { stirrupLayout, upperStitchLayout } from "../domain/theory";
 import {
+  bottomOffsetDepth,
+  bottomReach,
+  concreteProfile,
+} from "../domain/profile";
+import {
   loopPinDefined,
   requiresSupportHook,
   steelClassOf,
@@ -321,9 +326,10 @@ export function buildDetail(piece: Piece): Detail {
         );
       }
     });
-  const slope = (g.height - g.tipHeight) / g.length;
+  // Bottom face, with the excess-concrete cut when it applies.
+  const concrete = concreteProfile(p);
   const bottomAt = (x: number, offset: number) =>
-    g.height - slope * x - offset * Math.sqrt(1 + slope ** 2);
+    bottomOffsetDepth(concrete, x, offset);
   if (
     !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stitchDiameter) ||
     !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stirrupDiameter)
@@ -350,12 +356,7 @@ export function buildDetail(piece: Piece): Detail {
       const z = count === 1 ? (start + end) / 2 : start + i * step;
       const front = Math.min(
         g.length - g.cover - r.stitchDiameter / 2,
-        slope > 0
-          ? (g.height -
-              z -
-              (g.cover + r.stitchDiameter / 2) * Math.sqrt(1 + slope ** 2)) /
-              slope
-          : g.length,
+        bottomReach(concrete, z, g.cover + r.stitchDiameter / 2, g.length),
       );
       const embedment = s.stitchEmbedment;
       const width =
@@ -469,14 +470,38 @@ export function buildDetail(piece: Piece): Detail {
   if (s.mounting) {
     const end = g.length - g.cover - s.mountingDiameter / 2;
     const off = g.cover + r.stirrupDiameter + s.mountingDiameter / 2;
+    const nominalRadius =
+      mandrelDiameter(s.mountingDiameter, q.fykTransverse) / 2 +
+      s.mountingDiameter / 2;
+    // Intersect the parallel inset faces, rather than offsetting at each
+    // original x: that chord/fillet can enter the cover zone near a cut vertex.
+    const lines = concrete.bottom.slice(1).map((v, i) => {
+      const a = concrete.bottom[i];
+      const m = (v.depth - a.depth) / (v.x - a.x);
+      return { m, b: a.depth - m * a.x - off * Math.sqrt(1 + m * m) };
+    });
+    const corners = lines
+      .slice(1)
+      .map((line, i) => {
+        const previous = lines[i];
+        const x = (line.b - previous.b) / (previous.m - line.m);
+        return { x, y: line.m * x + line.b };
+      })
+      .filter((v) => v.x > 0 && v.x < end);
+    // At a re-entrant concrete corner the inset is a circle of radius off.
+    // A fillet at least this large stays on its concrete-interior side.
+    const radius =
+      concrete.status === "removed"
+        ? Math.max(nominalRadius, off)
+        : nominalRadius;
     const path = roundedPath(
       [
         { x: -Math.min(back, g.columnWidth - g.cover), y: bottomAt(0, off) },
         { x: 0, y: bottomAt(0, off) },
+        ...corners,
         { x: end, y: bottomAt(end, off) },
       ],
-      mandrelDiameter(s.mountingDiameter, q.fykTransverse) / 2 +
-        s.mountingDiameter / 2,
+      radius,
     );
     add({
       family: "mounting",
@@ -485,7 +510,10 @@ export function buildDetail(piece: Piece): Detail {
       grade: q.fykTransverse,
       quantity: 2,
       path,
-      mandrel: mandrelDiameter(s.mountingDiameter, q.fykTransverse),
+      mandrel:
+        concrete.status === "removed"
+          ? 2 * radius - s.mountingDiameter
+          : mandrelDiameter(s.mountingDiameter, q.fykTransverse),
       width: end + back,
       height: g.height - g.tipHeight,
       hookTail: 0,

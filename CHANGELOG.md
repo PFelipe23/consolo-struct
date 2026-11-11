@@ -4,6 +4,8 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Acrescenta a opção por peça de manter ou remover o concreto excedente (`excessConcrete`), em Configurações > Dimensionamento > Concreto excedente da peça selecionada. O padrão `keep` preserva a geometria e os resultados anteriores; arquivos antigos abrem com `keep`, sem mudança de esquema.
+- Com `remove` no modelo de bielas e tirantes, a face inferior é recortada abaixo da face inferior da biela, mantendo h na face do suporte e h₂ na ponta. Desenhos, 3D, detalhamento, quadro de aço, DXF/SVG, volume e peso próprio automático usam a seção recortada. A memória registra a nota `excessConcrete` (`review` quando aplicado; `na` quando não há recorte possível ou o método não é bielas e tirantes).
 - Ancoragem do tirante no suporte (issue #12): o coeficiente α cobre os quatro casos da NBR 6118 §9.4.2.5. Reta vale 1,0; gancho com cobrimento normal ≥ 3φ vale 0,7; barra transversal soldada vale 0,7; gancho + soldada vale 0,5. Nova caixa **Barra transversal soldada na ancoragem** (`supportWeldedBar`) em Cálculo > Ancoragem no suporte e no Detalhamento. Quando marcada, gera uma pendência "conferir" sobre a geometria da barra, que o programa não verifica.
 - Nova opção conservadora **Limitar a razão As,req/As,ef ao mínimo de 1,0** (`anchorRatioFloor`) em Cálculo > Ancoragem no suporte.
 - A verificação `anchorage` mantém id e comparação; a fórmula passa a `lb,nec = max(α·lb·razão; 0,3lb; 10φ; 100)`. A memória, o PDF e o cálculo auditável mostram α, a razão usada e `lb`, e expõem os valores `anchorRatio`, `anchorRatioFloor` e `anchorWeldedBar`.

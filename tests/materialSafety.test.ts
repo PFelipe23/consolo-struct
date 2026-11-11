@@ -49,6 +49,8 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
       const legacy = JSON.parse(JSON.stringify(p));
       delete legacy.design.gammaC;
       delete legacy.design.gammaS;
+      // Projeto anterior ao recorte: campo ausente, sem normalizar o fingerprint.
+      delete legacy.design.excessConcrete;
       // Issue #12: options off by default; only metadata and the anchorage
       // text (formula, α/ratio/lb detail) are new, the numbers are unchanged.
       delete legacy.design.supportWeldedBar;

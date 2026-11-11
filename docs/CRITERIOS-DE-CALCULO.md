@@ -94,7 +94,7 @@ No modo de cálculo, V e H já incluem os coeficientes, inclusive γn. O fator a
 
 No modo estimado, H informado é **adicional**: `Hd = Hestimado + max(Hinformado,d; 0)`. Isso evita descontar uma compressão favorável da estimativa normativa. No modo análise, H é a resultante total e exige justificativa, mesmo quando nulo. Apoios impedidos, grauteados ou soldados não aceitam a estimativa.
 
-O peso próprio usa 25 kN/m³ e o volume do prisma trapezoidal. É concentrado em a apenas se isso for conservador em momento: `xG = L(h+2h2)/(3(h+h2)) ≤ a`. Caso contrário, exige combinação equivalente justificada. Não se acrescenta automaticamente a forças já de cálculo nem à opção de carga indireta. Não se inclui peso do elemento apoiado sem entrada explícita.
+O peso próprio usa 25 kN/m³ e o volume do prisma trapezoidal (ou da seção recortada, quando aplicada). É concentrado em a apenas se isso for conservador em momento: `xG = L(h+2h2)/(3(h+h2)) ≤ a`. Caso contrário, exige combinação equivalente justificada. Com recorte, área e xG são integrados no polígono da seção. θ e c2 dependem somente da geometria e do arranjo do tirante, não das forças V/H; portanto, o perfil é definido antes de adicionar o peso, sem iteração. Cada candidato de armadura recalcula esse perfil. Não se acrescenta automaticamente a forças já de cálculo nem à opção de carga indireta. Não se inclui peso do elemento apoiado sem entrada explícita.
 
 Cada combinação conserva seu par simultâneo V/H. O envelope é feito **separadamente para cada verificação**. A combinação que maximiza As do tirante não necessariamente governa contato, ancoragem ou outro requisito.
 
@@ -338,6 +338,17 @@ Para ação direta, N3 ≥ 0,0015bh. Para ação indireta, N5 ≥ Vd/fywd e não
 - `a2=L−a−c_ap/2`; verificar afastamento frontal de §7.3.3.4 e h2 ≥ h/2−a2.
 - Tirante inteiro no quinto superior de h; φ ≤ min(25; min(b,h)/8) para alça ou /6 para soldada; distância em planta ≤ min(d;15φ) ou min(d;20φ).
 - Espaço livre horizontal ≥max(20;φ;1,2dag); critérios de disposição de §18.3.2.2 adotados explicitamente.
+
+### Recorte do concreto excedente
+
+Opção por peça (`excessConcrete`, padrão `keep`), em Configurações > Dimensionamento > Concreto excedente da peça selecionada.
+
+- `keep` preserva a face inferior reta de (0; h) a (L; h₂). Resultados, volume, desenhos e quadro de aço ficam idênticos aos anteriores.
+- `remove` só se aplica quando o método resolvido é bielas e tirantes (0,5 < a/d ≤ 1 no automático, ou bielas e tirantes explícito). A linha de recorte é a face inferior da biela do próprio modelo, prolongada: `y(x) = max(h; d + (c2/2)·√(1+tan²θ)) − tanθ·x`, com eixo da biela `y = d − tanθ·x` e `c2` como em "Curto". O intercepto nunca fica acima de h, de modo que a face do suporte, o nó inferior e a interface permanecem íntegros.
+- A nova face inferior é `min(face original; max(y(x); h₂))`: segue a face original junto ao suporte, a face inferior da biela no trecho intermediário e a horizontal em h₂ até a ponta. h, h₂, L, a, o tirante, as alças e a ancoragem no suporte não mudam.
+- Não há recorte quando a biela não fica abaixo da face original (`tanθ ≤ (h−h₂)/L` ou `y(L) ≥ h₂`), inclusive em consolos retangulares (h₂ = h), nem em atrito-cisalhamento ou viga em balanço. Nesses casos a geometria original é mantida e a memória registra a nota `excessConcrete` com estado `na`.
+- Com recorte aplicado, a nota `excessConcrete` tem estado `review` e informa ângulo e largura da biela, os vértices da face inferior e a área removida. As verificações usam as mesmas dimensões; o peso próprio automático e seu centroide passam a usar a seção recortada.
+- Estribos verticais, costuras e porta-estribos seguem a face recortada com o mesmo cobrimento (distância mínima à poligonal da face). Desenhos, modelo 3D, DXF/SVG e quantitativos de volume usam o mesmo perfil.
 
 ## Durabilidade
 

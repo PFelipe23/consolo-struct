@@ -24,6 +24,7 @@ import {
   PencilLine,
   Ruler,
   Save,
+  Scissors,
   SlidersHorizontal,
   Table2,
   Trash2,
@@ -240,6 +241,11 @@ export const ribbonCommands = {
     SlidersHorizontal,
     "Editar γc e γs da peça selecionada e conferir o par de referência do processo de produção",
   ),
+  excessConcrete: command(
+    "Concreto excedente da peça selecionada",
+    Scissors,
+    "Manter a geometria original ou remover o concreto dispensável abaixo da biela da peça selecionada",
+  ),
 };
 export type Action = keyof typeof ribbonCommands;
 export const ribbonTabs = [
@@ -420,6 +426,7 @@ export const ribbonGroups: Record<RibbonTab, Group[]> = {
         tool("design"),
         tool("strutLimit"),
         tool("materialSafety"),
+        tool("excessConcrete"),
       ],
     },
     {

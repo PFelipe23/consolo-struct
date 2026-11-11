@@ -10,6 +10,7 @@ import {
 import { type Bar, type Detail } from "./model";
 import { pinCenters } from "./model";
 import { reactionGeometry } from "../domain/theory";
+import { bottomDepth, concreteProfile } from "../domain/profile";
 import { coefficientText, materialSafety } from "../domain/materialSafety";
 import { steelLabel } from "../domain/steel";
 
@@ -63,6 +64,8 @@ export const colors: Record<Layer, string> = {
 export function pieceDrawing(project: Project, d: Detail): Drawing {
   const p = d.piece,
     g = p.geometry,
+    concrete = concreteProfile(p),
+    cut = concrete.status === "removed",
     r = p.rebar,
     q = p.design,
     s = p.detailing;
@@ -288,8 +291,9 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     { x, y: y - 4 },
     { x, y },
     { x: x + L, y },
-    { x: x + L, y: y + g.tipHeight / 10 },
-    { x, y: y + H },
+    ...[...concrete.bottom]
+      .reverse()
+      .map((v) => ({ x: x + v.x / 10, y: y + v.depth / 10 })),
     { x, y: y + H + 5 },
     { x: x - P, y: y + H + 5 },
   ]);
@@ -310,6 +314,17 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     Math.max(q.bearingHeight / 10, 1),
   );
   const slope = (g.height - g.tipHeight) / g.length;
+  // Inclination of each inclined stretch of the bottom face, in degrees.
+  const bottomAngles = concrete.bottom
+    .slice(1)
+    .map((v, i) => {
+      const a = concrete.bottom[i];
+      return (Math.atan((a.depth - v.depth) / (v.x - a.x)) * 180) / Math.PI;
+    })
+    .filter((angle) => angle > 1e-6);
+  const anglesText = (cut ? bottomAngles : [(Math.atan(slope) * 180) / Math.PI])
+    .map((angle) => `${number(angle, 1)}°`)
+    .join(" / ");
   for (const b of d.bars) {
     if (b.family === "tie")
       for (const loc of b.locations) {
@@ -415,7 +430,9 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   // Section at the root, common to both concrete geometry and actual tie layer depths.
   const sectionBar = verticalBars[0];
   const cutDepth = sectionBar?.locations[0].x ?? 0;
-  const sectionH = H - (slope * cutDepth) / 10;
+  const sectionH = cut
+    ? bottomDepth(concrete, cutDepth) / 10
+    : H - (slope * cutDepth) / 10;
   text(sectionX, y - 8, `CORTE A-A / x=${cm(cutDepth)} cm`, 2.8);
   rect(sectionX, y, B, sectionH);
   if (sectionBar)
@@ -585,7 +602,9 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     r.stirrupCount > 1
       ? (g.length - 2 * g.cover - r.stirrupDiameter) / (r.stirrupCount - 1)
       : 0;
-  const bearingH = H - (slope * g.loadOffset) / 10;
+  const bearingH = cut
+    ? bottomDepth(concrete, g.loadOffset) / 10
+    : H - (slope * g.loadOffset) / 10;
   text(
     sectionX,
     planY - (s.pins ? Math.max(10, s.pinProjection / 10 + 5) : 10),
@@ -718,7 +737,9 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   text(
     sectionX,
     infoY + 30,
-    `Face inferior com inclinação ${number((Math.atan(slope) * 180) / Math.PI, 1)}°.`,
+    cut
+      ? `Face inferior recortada (concreto excedente removido): ${anglesText}.`
+      : `Face inferior com inclinação ${anglesText}.`,
     2.1,
   );
   // Steel schedule. Every position references the very same bar centre-line model as the sketches.
@@ -926,9 +947,7 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
         `Trechos retos: ${b.path.segments
           .filter((v) => v.type === "line")
           .map((v) => cm(Math.hypot(v.b.x - v.a.x, v.b.y - v.a.y)))
-          .join(
-            " / ",
-          )} cm; dobra ${number((Math.atan(slope) * 180) / Math.PI, 1)}°.`,
+          .join(" / ")} cm; ${cut ? "dobras" : "dobra"} ${anglesText}.`,
         2.05,
       );
     if (b.family === "stitch" || b.family === "lower")

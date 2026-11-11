@@ -1,5 +1,10 @@
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
+import {
+  bottomOffsetDepth,
+  bottomReach,
+  concreteProfile,
+} from "../domain/profile";
 import { useId } from "react";
 import { number, type Piece, type GeometryKey } from "../domain/model";
 type Props = {
@@ -116,7 +121,17 @@ export default function Drawing({
     oy = 185;
   const X = (x: number) => ox + x * s,
     Y = (y: number) => oy + y * s;
-  const path = `M${X(-g.columnWidth)} ${Y(-100)}H${X(0)}V${Y(0)}H${X(g.length)}V${Y(g.tipHeight)}L${X(0)} ${Y(g.height)}V${Y(g.height + 80)}H${X(-g.columnWidth)}Z`;
+  const concrete = concreteProfile(p);
+  const cut = concrete.status === "removed";
+  const bottomPath = [...concrete.bottom]
+    .reverse()
+    .map((v) => `L${X(v.x)} ${Y(v.depth)}`)
+    .join("");
+  const path = `M${X(-g.columnWidth)} ${Y(-100)}H${X(0)}V${Y(0)}H${X(g.length)}${bottomPath}V${Y(g.height + 80)}H${X(-g.columnWidth)}Z`;
+  // Original face, shown dashed where the excess concrete was cut away.
+  const removedPath = cut
+    ? `M${X(0)} ${Y(g.height)}L${X(g.length)} ${Y(g.tipHeight)}`
+    : "";
   const groupProps = (id: string) => ({
     className: `steel steel-${id} ${selectedBar === id ? "steel-selected" : ""}`,
     role: "button",
@@ -290,6 +305,18 @@ export default function Drawing({
               strokeWidth="1.5"
             />
             <path d={path} fill={`url(#${uid}concrete)`} />
+            {cut && (
+              <path
+                className="excess-concrete-outline"
+                d={removedPath}
+                fill="none"
+                stroke="var(--line-muted)"
+                strokeDasharray="4 4"
+                opacity=".7"
+              >
+                <title>Face original; concreto excedente removido</title>
+              </path>
+            )}
             <path
               d={`M${X(0)} ${Y(-100)}V${Y(g.height + 80)}`}
               stroke="var(--line-muted)"
@@ -300,8 +327,14 @@ export default function Drawing({
               <>
                 <g {...groupProps("N2")} fill="none" strokeWidth="2">
                   {stitchLevels.map((y, i) => {
-                    const end =
-                      g.height === g.tipHeight
+                    const end = cut
+                      ? bottomReach(
+                          concrete,
+                          y,
+                          g.cover + p.rebar.stitchDiameter / 2,
+                          g.length,
+                        )
+                      : g.height === g.tipHeight
                         ? g.length
                         : y <= g.tipHeight
                           ? g.length
@@ -321,10 +354,15 @@ export default function Drawing({
                       g.cover +
                       ((g.length - 2 * g.cover) * i) /
                         Math.max(1, p.rebar.stirrupCount - 1);
-                    const bottom =
-                      g.height -
-                      ((g.height - g.tipHeight) * x) / g.length -
-                      g.cover;
+                    const bottom = cut
+                      ? bottomOffsetDepth(
+                          concrete,
+                          x,
+                          g.cover + p.rebar.stirrupDiameter / 2,
+                        )
+                      : g.height -
+                        ((g.height - g.tipHeight) * x) / g.length -
+                        g.cover;
                     return (
                       <path key={i} d={`M${X(x)} ${Y(g.cover)}V${Y(bottom)}`} />
                     );
