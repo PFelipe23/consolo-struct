@@ -2084,6 +2084,21 @@ kbd {
 .strut-limit-control small {
   color: var(--muted);
 }
+.excess-concrete-control fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.excess-concrete-option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 6px 0;
+  cursor: pointer;
+}
+.excess-concrete-option input {
+  margin-top: 4px;
+}
 .strut-limit-warning {
   padding-left: 8px;
   border-left: 3px solid var(--accent);

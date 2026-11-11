@@ -1,6 +1,7 @@
 import { number, type GeometryKey, type Piece } from "../domain/model";
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
+import { bottomDepth, bottomReach, concreteProfile } from "../domain/profile";
 
 /** World coordinates in mm: X = corbel length, Y = width, Z = up. */
 export type Point3 = [number, number, number];
@@ -48,6 +49,7 @@ export function buildSceneModel(p: Piece): SceneModel {
   const margin = Math.max(22, span * 0.075),
     side = g.width / 2;
   const layout = tieLayout(p);
+  const concrete = concreteProfile(p);
   const { d, dPrime, rows } = layout;
   const dim = (
     id: GeometryKey,
@@ -219,13 +221,18 @@ export function buildSceneModel(p: Piece): SceneModel {
   const costura = (depth: number) => {
     const y = side - g.cover - r.stitchDiameter / 2;
     const end =
-      g.height === g.tipHeight || depth <= g.tipHeight - g.cover
-        ? g.length - g.cover
-        : Math.max(
-            0,
-            (g.length * (g.height - depth - g.cover)) /
-              (g.height - g.tipHeight),
-          );
+      concrete.status === "removed"
+        ? Math.min(
+            g.length - g.cover,
+            bottomReach(concrete, depth, g.cover, g.length),
+          )
+        : g.height === g.tipHeight || depth <= g.tipHeight - g.cover
+          ? g.length - g.cover
+          : Math.max(
+              0,
+              (g.length * (g.height - depth - g.cover)) /
+                (g.height - g.tipHeight),
+            );
     const points: Point3[] = [
       [back, -y, -depth],
       [end, -y, -depth],
@@ -244,8 +251,9 @@ export function buildSceneModel(p: Piece): SceneModel {
     const y = side - g.cover - r.stirrupDiameter / 2;
     const top = -g.cover - r.stirrupDiameter / 2;
     const bottom =
-      -g.height +
-      ((g.height - g.tipHeight) * x) / g.length +
+      (concrete.status === "removed"
+        ? -bottomDepth(concrete, x)
+        : -g.height + ((g.height - g.tipHeight) * x) / g.length) +
       g.cover +
       r.stirrupDiameter / 2;
     steel.push({
@@ -279,8 +287,9 @@ export function buildSceneModel(p: Piece): SceneModel {
     profile: [
       [0, 0],
       [g.length, 0],
-      [g.length, -g.tipHeight],
-      [0, -g.height],
+      ...[...concrete.bottom]
+        .reverse()
+        .map((v): [number, number] => [v.x, -v.depth]),
     ],
     width: g.width,
     support,

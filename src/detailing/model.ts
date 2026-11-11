@@ -2,6 +2,11 @@ import { calculate, tieLayout, type CalculationResult } from "../domain/engine";
 import { geometryErrors, type Piece } from "../domain/model";
 import { stirrupLayout, upperStitchLayout } from "../domain/theory";
 import {
+  bottomOffsetDepth,
+  bottomReach,
+  concreteProfile,
+} from "../domain/profile";
+import {
   closedStirrup,
   mandrelDiameter,
   roundedPath,
@@ -314,9 +319,10 @@ export function buildDetail(piece: Piece): Detail {
         );
       }
     });
-  const slope = (g.height - g.tipHeight) / g.length;
+  // Bottom face, with the excess-concrete cut when it applies.
+  const concrete = concreteProfile(p);
   const bottomAt = (x: number, offset: number) =>
-    g.height - slope * x - offset * Math.sqrt(1 + slope ** 2);
+    bottomOffsetDepth(concrete, x, offset);
   if (
     q.fykTransverse === 600 &&
     (r.stitchDiameter > 10 || r.stirrupDiameter > 10)
@@ -343,12 +349,7 @@ export function buildDetail(piece: Piece): Detail {
       const z = count === 1 ? (start + end) / 2 : start + i * step;
       const front = Math.min(
         g.length - g.cover - r.stitchDiameter / 2,
-        slope > 0
-          ? (g.height -
-              z -
-              (g.cover + r.stitchDiameter / 2) * Math.sqrt(1 + slope ** 2)) /
-              slope
-          : g.length,
+        bottomReach(concrete, z, g.cover + r.stitchDiameter / 2, g.length),
       );
       const embedment = s.stitchEmbedment;
       const width =
@@ -462,10 +463,16 @@ export function buildDetail(piece: Piece): Detail {
   if (s.mounting) {
     const end = g.length - g.cover - s.mountingDiameter / 2;
     const off = g.cover + r.stirrupDiameter + s.mountingDiameter / 2;
+    // Follows every vertex of the bottom face (one bend, or more with the cut).
+    const corners = concrete.bottom
+      .slice(1, -1)
+      .map((v) => v.x)
+      .filter((x) => x > 0 && x < end);
     const path = roundedPath(
       [
         { x: -Math.min(back, g.columnWidth - g.cover), y: bottomAt(0, off) },
         { x: 0, y: bottomAt(0, off) },
+        ...corners.map((x) => ({ x, y: bottomAt(x, off) })),
         { x: end, y: bottomAt(end, off) },
       ],
       mandrelDiameter(s.mountingDiameter, q.fykTransverse) / 2 +

@@ -5,21 +5,17 @@ import {
   methodLabels,
   POLICY,
 } from "../domain/engine";
-import {
-  area,
-  number,
-  volume,
-  type Piece,
-  type Project,
-} from "../domain/model";
+import { area, number, type Piece, type Project } from "../domain/model";
+import { concreteProfile, pieceVolume } from "../domain/profile";
 
 export function piecePoints(p: Piece): [number, number][] {
   const g = p.geometry;
   return [
     [0, 0],
     [g.length, 0],
-    [g.length, -g.tipHeight],
-    [0, -g.height],
+    ...[...concreteProfile(p).bottom]
+      .reverse()
+      .map((v): [number, number] => [v.x, -v.depth]),
   ];
 }
 export function toSvg(p: Piece): string {
@@ -151,7 +147,7 @@ export function toCsv(project: Project) {
       p.rebar.tieCount,
       p.rebar.tieDiameter,
       number(area(p.rebar.tieCount, p.rebar.tieDiameter) / 100, 2),
-      number(volume(p.geometry) * p.quantity, 3),
+      number(pieceVolume(p) * p.quantity, 3),
       r.status,
       r.values.tieRequired === undefined
         ? ""
@@ -294,6 +290,10 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   line(
     `b=${p.geometry.width} mm; h=${p.geometry.height} mm; h2=${p.geometry.tipHeight} mm; L=${p.geometry.length} mm; a=${p.geometry.loadOffset} mm; cnom=${p.geometry.cover} mm; P=${p.geometry.columnWidth} mm.`,
   );
+  if ((p.design.excessConcrete ?? "keep") === "remove")
+    line(
+      `Concreto excedente: remover. Situacao: ${concreteProfile(p).status === "removed" ? "recorte aplicado abaixo da biela" : "recorte nao aplicado, geometria original"}; ver nota excessConcrete.`,
+    );
   line(
     `fck=${p.materials.fck} MPa; fyk=${p.materials.fyk} MPa. N1=${p.rebar.tieCount} ramos phi ${p.rebar.tieDiameter}; N2=${p.rebar.stitchCount} estribos phi ${p.rebar.stitchDiameter}; N3=${p.rebar.stirrupCount} estribos phi ${p.rebar.stirrupDiameter}.`,
   );

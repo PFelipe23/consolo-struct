@@ -293,6 +293,17 @@ Para ação direta, N3 ≥ 0,0015bh. Para ação indireta, N5 ≥ Vd/fywd e não
 - Tirante inteiro no quinto superior de h; φ ≤ min(25; min(b,h)/8) para alça ou /6 para soldada; distância em planta ≤ min(d;15φ) ou min(d;20φ).
 - Espaço livre horizontal ≥max(20;φ;1,2dag); critérios de disposição de §18.3.2.2 adotados explicitamente.
 
+### Recorte do concreto excedente
+
+Opção por peça (`excessConcrete`, padrão `keep`), em Configurações > Dimensionamento > Concreto excedente da peça selecionada.
+
+- `keep` preserva a face inferior reta de (0; h) a (L; h₂). Resultados, volume, desenhos e quadro de aço ficam idênticos aos anteriores.
+- `remove` só se aplica quando o método resolvido é bielas e tirantes (0,5 < a/d ≤ 1 no automático, ou bielas e tirantes explícito). A linha de recorte é a face inferior da biela do próprio modelo, prolongada: `y(x) = max(h; d + (c2/2)·√(1+tan²θ)) − tanθ·x`, com eixo da biela `y = d − tanθ·x` e `c2` como em "Curto". O intercepto nunca fica acima de h, de modo que a face do suporte, o nó inferior e a interface permanecem íntegros.
+- A nova face inferior é `min(face original; max(y(x); h₂))`: segue a face original junto ao suporte, a face inferior da biela no trecho intermediário e a horizontal em h₂ até a ponta. h, h₂, L, a, o tirante, as alças e a ancoragem no suporte não mudam.
+- Não há recorte quando a biela não fica abaixo da face original (`tanθ ≤ (h−h₂)/L` ou `y(L) ≥ h₂`), inclusive em consolos retangulares (h₂ = h), nem em atrito-cisalhamento ou viga em balanço. Nesses casos a geometria original é mantida e a memória registra a nota `excessConcrete` com estado `na`.
+- Com recorte aplicado, a nota `excessConcrete` tem estado `review` e informa ângulo e largura da biela, os vértices da face inferior e a área removida. As verificações usam as mesmas dimensões; o peso próprio automático e seu centroide passam a usar a seção recortada.
+- Estribos verticais, costuras e porta-estribos seguem a face recortada com o mesmo cobrimento (distância mínima à poligonal da face). Desenhos, modelo 3D, DXF/SVG e quantitativos de volume usam o mesmo perfil.
+
 ## Durabilidade
 
 Cobrimentos nominais de referência: 25/30/40/50 mm para CAA I/II/III/IV; classes mínimas C20/C25/C30/C40. Verifica-se também cobrimento ≥φ e dag ≤1,2c. Redução de 5 mm só mediante opção explícita de controle de qualidade e processo compatível; não se acumulam automaticamente outras reduções especiais.

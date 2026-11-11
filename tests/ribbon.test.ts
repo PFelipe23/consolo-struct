@@ -54,8 +54,13 @@ const actions = (tab: (typeof ribbonTabs)[number]) =>
   );
 
 describe("Catálogo e composição do ribbon", () => {
-  it("preserva as 39 identidades e acrescenta coeficientes dos materiais, sem duplicação dentro de uma aba", () => {
-    const expected = [...baseline, "strutLimit", "materialSafety"].sort();
+  it("preserva as 39 identidades e acrescenta coeficientes dos materiais e concreto excedente, sem duplicação dentro de uma aba", () => {
+    const expected = [
+      ...baseline,
+      "strutLimit",
+      "materialSafety",
+      "excessConcrete",
+    ].sort();
     expect(Object.keys(ribbonCommands).sort()).toEqual(expected);
     const reachable = new Set<Action>();
     for (const tab of ribbonTabs) {
@@ -170,6 +175,7 @@ describe("Catálogo e composição do ribbon", () => {
       "design",
       "strutLimit",
       "materialSafety",
+      "excessConcrete",
     ]);
     expect(actions("Exibir")).not.toContain("theme");
   });

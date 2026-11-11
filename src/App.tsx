@@ -41,6 +41,8 @@ import Ribbon, { type Action, type RibbonTab } from "./components/Ribbon";
 import { ribbonCommands } from "./components/ribbonCommands";
 import StrutLimitControl from "./components/StrutLimitControl";
 import MaterialSafetyControl from "./components/MaterialSafetyControl";
+import ExcessConcreteControl from "./components/ExcessConcreteControl";
+import { pieceVolume } from "./domain/profile";
 import PanelResizer from "./components/PanelResizer";
 import Inspector from "./components/Inspector";
 import ProjectBrowser from "./components/ProjectBrowser";
@@ -61,7 +63,6 @@ import {
   geometryErrors,
   newPiece,
   number,
-  volume,
   type GeometryKey,
   type InspectorTab,
   type Piece,
@@ -104,6 +105,7 @@ type Modal =
   | "delete"
   | "strutLimit"
   | "materialSafety"
+  | "excessConcrete"
   | null;
 type History = { past: Project[]; present: Project; future: Project[] };
 
@@ -539,6 +541,9 @@ export default function App() {
       case "materialSafety":
         setModal("materialSafety");
         break;
+      case "excessConcrete":
+        setModal("excessConcrete");
+        break;
       case "new": {
         setForm({
           name: "",
@@ -876,7 +881,7 @@ export default function App() {
                   </button>
                 ))}
                 <span className="geometry-summary">
-                  Vol. {number(volume(p.geometry), 3)} m³ <span>·</span> Aₛ,N1{" "}
+                  Vol. {number(pieceVolume(p), 3)} m³ <span>·</span> Aₛ,N1{" "}
                   {number(area(p.rebar.tieCount, p.rebar.tieDiameter) / 100, 2)}{" "}
                   cm²
                 </span>
@@ -934,7 +939,7 @@ export default function App() {
                   <strong>
                     {number(
                       project.pieces.reduce(
-                        (s, p) => s + volume(p.geometry) * p.quantity,
+                        (s, p) => s + pieceVolume(p) * p.quantity,
                         0,
                       ),
                       3,
@@ -1154,18 +1159,22 @@ export default function App() {
                 ? "Limite da biela da peça selecionada"
                 : modal === "materialSafety"
                   ? "Coeficientes dos materiais da peça selecionada"
-                  : modal === "project" || modal === "newProject"
-                    ? "Dados do projeto"
-                    : modal === "piece"
-                      ? "Identificação da peça"
-                      : modal === "export"
-                        ? "Exportar projeto"
-                        : modal === "delete"
-                          ? "Excluir este consolo?"
-                          : "Conheça o ConsoloStruct"}
+                  : modal === "excessConcrete"
+                    ? "Concreto excedente da peça selecionada"
+                    : modal === "project" || modal === "newProject"
+                      ? "Dados do projeto"
+                      : modal === "piece"
+                        ? "Identificação da peça"
+                        : modal === "export"
+                          ? "Exportar projeto"
+                          : modal === "delete"
+                            ? "Excluir este consolo?"
+                            : "Conheça o ConsoloStruct"}
             </Dialog.Title>
             <Dialog.Description>
-              {modal === "strutLimit" || modal === "materialSafety"
+              {modal === "strutLimit" ||
+              modal === "materialSafety" ||
+              modal === "excessConcrete"
                 ? `Peça ${p.name} · ${p.description}. As alterações entram em Desfazer/Refazer. Use Salvar projeto para guardar os valores no arquivo.`
                 : modal === "export"
                   ? "PDF e CSV recalculam os dados atuais. DXF e SVG são geométricos."
@@ -1362,6 +1371,26 @@ export default function App() {
                 <p>
                   Os valores afetam somente a peça selecionada. Use Calcular
                   para conferir a nova revisão após editar.
+                </p>
+                <div className="modal-actions">
+                  <Dialog.Close className="button">Concluir</Dialog.Close>
+                </div>
+              </>
+            )}
+            {modal === "excessConcrete" && (
+              <>
+                <ExcessConcreteControl
+                  piece={p}
+                  onChange={(value) =>
+                    updatePiece({
+                      ...p,
+                      design: { ...p.design, excessConcrete: value },
+                    })
+                  }
+                />
+                <p>
+                  A geometria é atualizada em todas as vistas. Use Calcular para
+                  conferir a nova revisão.
                 </p>
                 <div className="modal-actions">
                   <Dialog.Close className="button">Concluir</Dialog.Close>

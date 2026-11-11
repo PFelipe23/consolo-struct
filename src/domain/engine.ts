@@ -4,7 +4,6 @@ import {
   geometryErrors,
   number,
   pieceSchema,
-  volume,
   type Piece,
 } from "./model";
 import {
@@ -23,6 +22,7 @@ import {
   materialSafety,
   materialSafetyReference,
 } from "./materialSafety";
+import { concreteProfile, excessConcreteLabels, pieceVolume } from "./profile";
 
 export const ENGINE_VERSION = "0.4.0";
 export const POLICY = "LC-ELU-2026.2";
@@ -445,7 +445,7 @@ function calculateCase(
   const factor = q.forceMode === "design" ? 1 : load.gamma * gammaN;
   const selfWeight =
     q.includeSelfWeight && q.forceMode === "characteristic"
-      ? volume(g) * 25000
+      ? pieceVolume(p) * 25000
       : 0;
   // Concentrate self-weight at a only if conservative; otherwise use its actual moment arm in a supplementary check below.
   const vertical = (load.vertical + selfWeight) * factor;
@@ -637,6 +637,21 @@ function calculateCase(
     r.stirrupCount > 1 ? stirrupLayout(p).pitch : g.length;
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
+  const profile = concreteProfile(p);
+  if (profile.status !== "kept")
+    add(
+      note(
+        "excessConcrete",
+        excessConcreteLabels[profile.status],
+        profile.status === "removed"
+          ? `Recorte abaixo da face inferior da biela (θ = ${number((Math.atan(profile.cutLine!.tangent) * 180) / Math.PI, 1)}°, largura ${number(profile.cutLine!.strutWidth, 1)} mm): face inferior ${profile.bottom.map((v) => `(${number(v.x, 1)}; ${number(v.depth, 1)})`).join(" → ")} mm. Área lateral removida ${number(profile.removedArea / 100, 1)} cm² (${number(profile.removedRatio * 100, 1)}%). Mantidos h na face do suporte, h₂ na ponta e a biela do modelo; as verificações usam as mesmas dimensões. Conferir a forma com o responsável técnico.`
+          : profile.status === "notStrut"
+            ? "A opção “Remover concreto excedente” só se aplica ao modelo de bielas e tirantes. A geometria original foi mantida."
+            : "A face inferior já está acima da face inferior da biela ou o recorte reduziria h₂. A geometria original foi mantida.",
+        refs.stm,
+        profile.status === "removed" ? "review" : "na",
+      ),
+    );
   if (safety.below.length)
     add(
       note(
@@ -1586,7 +1601,6 @@ export function calculate(p: Piece): CalculationResult {
     return base;
   }
   const errors = geometryErrors(p),
-    g = p.geometry,
     q = p.design,
     layout = tieLayout(p);
   const reaction = reactionGeometry(p);
@@ -1659,8 +1673,8 @@ export function calculate(p: Piece): CalculationResult {
     unsupported.push(
       "Peso próprio automático não é combinado com carga indireta. Modele separadamente ações diretas e indiretas.",
     );
-  const centroidX =
-    (g.length * (g.height + 2 * g.tipHeight)) / (3 * (g.height + g.tipHeight));
+  const profile = concreteProfile(p);
+  const centroidX = profile.centroidX;
   if (
     q.includeSelfWeight &&
     q.forceMode === "characteristic" &&
@@ -1677,7 +1691,7 @@ export function calculate(p: Piece): CalculationResult {
   for (const load of allLoads) {
     const weight =
       q.includeSelfWeight && q.forceMode === "characteristic"
-        ? volume(g) * 25000
+        ? pieceVolume(p, profile) * 25000
         : 0;
     const rawRatio =
       Math.max(0, load.horizontal) / (load.vertical + weight) +

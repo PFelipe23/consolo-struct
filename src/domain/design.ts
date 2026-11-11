@@ -10,6 +10,8 @@ export const strutLimitSchema = z.enum([
   "direct100",
 ]);
 export type StrutLimit = z.infer<typeof strutLimitSchema>;
+export const excessConcreteSchema = z.enum(["keep", "remove"]);
+export type ExcessConcrete = z.infer<typeof excessConcreteSchema>;
 const materialFactor = (symbol: string, initial: number) => {
   const error = `${symbol} deve ser um número finito entre 1,0 e 2,0.`;
   return z
@@ -22,6 +24,8 @@ const materialFactor = (symbol: string, initial: number) => {
 export const designSchema = z.object({
   method: z.enum(["auto", "strut", "friction"]),
   strutLimit: strutLimitSchema.default("fcd2"),
+  // Missing field keeps the original geometry of projects saved before this option.
+  excessConcrete: excessConcreteSchema.default("keep"),
   // Missing fields preserve the policy of projects saved before 0.7.
   literatureRecommendations: z.boolean().default(false),
   reactionPosition: z
@@ -105,6 +109,7 @@ export function defaultDesign(
   return {
     method: "auto",
     strutLimit: "fcd2",
+    excessConcrete: "keep",
     literatureRecommendations: true,
     reactionPosition: "specified",
     production: "precast",

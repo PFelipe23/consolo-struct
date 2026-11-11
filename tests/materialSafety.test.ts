@@ -17,7 +17,8 @@ import { suggestReinforcement } from "../src/domain/autodesign";
 
 describe("Coeficientes dos materiais — resistências em MPa", () => {
   // Resultados completos capturados antes desta alteração, no upstream 41c3a12.
-  // Excluem-se somente os quatro novos campos de metadados de coeficientes.
+  // Excluem-se somente os quatro novos campos de metadados de coeficientes e o
+  // eco da opção de recorte do concreto excedente.
   it.each([
     [
       "friction",
@@ -56,7 +57,12 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
         "gammaSReference",
       ]);
       const raw = JSON.stringify(calculate(legacy), (key, value) =>
-        metadata.has(key) ? undefined : value,
+        metadata.has(key)
+          ? undefined
+          : key === "fingerprint"
+            ? // Opção de recorte no padrão "keep": eco da entrada, sem efeito numérico.
+              String(value).replace(',"excessConcrete":"keep"', "")
+            : value,
       );
       expect(createHash("sha256").update(raw).digest("hex")).toBe(expected);
     },
