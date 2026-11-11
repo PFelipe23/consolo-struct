@@ -4,6 +4,10 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Otimiza Sugerir armaduras: avalia todas as camadas da primeira contagem viável por bitola e poda apenas áreas estritamente maiores que a melhor encontrada, preservando a pontuação e os empates. O contador passa a mostrar candidatos efetivamente avaliados.
+- Dimensiona costura superior/inferior, estribos, fendilhamento e suspensão em cada candidato antes de julgá-lo; inclui as respectivas verificações críticas e mantém o tratamento de viga/pele. Nenhuma fórmula ou limite do motor é alterado.
+- Explica sugestões sem solução com os rótulos críticos comuns aos candidatos ou as falhas do último arranjo da maior bitola, preservando as entradas. Mantém as mensagens de domínio e as pendências externas; registra a comparação com buscas completas na validação da issue #16.
+
 - Torna γc e γs editáveis por peça em Cálculo e em Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada. Padrões 1,40/1,15 em arquivos antigos, sem mudança de esquema; histórico e salvamento preservam as escolhas. A troca de produção não muda os valores automaticamente.
 - Usa os coeficientes adotados em fcd, fyd, fctd, fywd e armadura mínima de flexão, preservando os tetos de 435 MPa. Registra adotados e referências na memória, PDF, cálculo auditável e notas de detalhamento com valores alterados.
 - Acrescenta pendência `review` para cada coeficiente abaixo do par informado na issue #2: pré-moldado/moldado no local 1,40/1,15; pré-fabricado 1,30/1,10. A redução é tratada como permissão da NBR 9062:2017 §8.1, sujeita à decisão do responsável técnico; o produto não certifica o enquadramento do elemento. Referências normativas não conferidas nesta contribuição. γf, γn, combinações e classes de aço permanecem iguais.

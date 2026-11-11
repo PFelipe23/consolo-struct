@@ -690,6 +690,9 @@ describe("Sugestão da viga em balanço com combinações", () => {
     p.design.bearingWidth = 300;
     p.design.bearingLength = 200;
     p.rebar.stirrupDiameter = 16;
+    // Keep this test focused on simultaneous shear spacing. The original 6.3 mm
+    // stitch fails stitchClear; that rejection is covered in autodesign.test.ts.
+    p.rebar.stitchDiameter = 10;
     p.design.loopInternalDiameter = 125;
     p.design.combinations = [
       { name: "H", vertical: 230000, horizontal: 150000, gamma: 1.4 },

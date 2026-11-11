@@ -61,6 +61,18 @@ Para cada camada, o centro da primeira fileira está em `c + φN3 + φN1/2 + acr
 
 Todo novo arranjo da busca automática recalcula d, a/d, forças internas, armaduras mínimas e todas as combinações. Não se usa altura útil fixa após alterar bitola ou camadas.
 
+### Busca de armadura sugerida
+
+A busca avalia bitolas em ordem crescente (6,3; 8; 10; 12,5; 16; 20; 25 mm), contagens de 2 a 24 e camadas de 1 a 3. O passo de contagem é 2 para alças e 1 para barra soldada. Mantém a pontuação `área + camadas·0,001 + contagem·0,00001`: a área tem prioridade; camadas e contagem são critérios de desempate. Não se procura uma solução de uma camada a qualquer custo de área.
+
+Antes do julgamento, cada candidato recebe o dimensionamento de quantidades de costura superior e inferior, estribos, fendilhamento e suspensão, seguido de recálculo. A viga mantém o dimensionamento por área e pelo menor espaçamento máximo entre as combinações; acima de h = 600 mm, N2 não é alterado como costura e a pele continua `review`. Demandas omitidas por domínio de flexão inválido não são convertidas em contagens NaN; a falha do domínio continua bloqueando a proposta.
+
+Além dos ids críticos anteriores, entram `stitch`, `stitchSpacing`, `stitchZone`, `stitchClear`, `stitchDiameter`, `lowerStitch`, `lowerSpacing`, `transverse`, `suspension` e `splitting`. A costura e suas regras de disposição só se aplicam fora de viga ou, na viga, com h ≤ 600 mm; a costura inferior só no muito curto; `transverse` só fora de viga; suspensão só na carga indireta. `splitting` está presente com exigência zero quando não há fendilhamento a dimensionar. Condições de zona, espaço livre e diâmetro continuam sendo restrições geométricas: a busca não muda a bitola secundária para contorná-las. O candidato só é viável com resultado calculável, diferente de `invalid`, e nenhuma falha crítica após o dimensionamento. Conferências `review`, ancoragem informada e demais pendências externas não viram aprovação.
+
+Em cada bitola, todas as camadas da primeira contagem viável são avaliadas antes de encerrar essa bitola. Uma contagem reprovada não impede testar as seguintes. A poda só ocorre quando a área supera **estritamente** a melhor área, preservando empates entre bitolas. `candidates` registra somente os arranjos avaliados após os descartes por camadas incompatíveis ou linhas ímpares, independentemente de quantos recálculos foram necessários.
+
+Sem solução, a mensagem apresenta os rótulos críticos reprovados em todos os candidatos avaliados; sem interseção, usa o último arranjo avaliado da maior bitola. Se o dimensionamento exceder o esquema de edição e o motor não fornecer verificações, preserva a mensagem de domínio e as falhas da avaliação anterior para diagnóstico. Entradas fora do domínio recebem as razões do motor; ausência de candidatos avaliados é declarada. Nenhum dado é alterado nesses casos. As fórmulas, coeficientes e limites do motor permanecem iguais. Consulte a [validação da issue #16](VALIDACAO-BUSCA-ARMADURA.md).
+
 ## Ações
 
 No modo característico:
