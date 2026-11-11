@@ -1,7 +1,15 @@
 import DesignPanel from "./DesignPanel";
 import { ribbonCommands } from "./ribbonCommands";
 import { coefficientText } from "../domain/materialSafety";
-import { memo } from "react";
+import {
+  fykOf,
+  steelBondDescription,
+  steelClasses,
+  steelClassOf,
+  steelLabel,
+  steelOptionLabel,
+} from "../domain/steel";
+import { memo, useId } from "react";
 import {
   ChevronDown,
   SlidersHorizontal,
@@ -39,6 +47,8 @@ function Inspector({
   setBar: (b: string) => void;
   onClose: () => void;
 }) {
+  const steelId = useId();
+  const steel = steelClassOf(p.materials.fyk);
   const tabs = [
     { id: "geometry", label: "Geometria", icon: Ruler },
     { id: "loads", label: "Ações", icon: ArrowDownToLine },
@@ -242,23 +252,41 @@ function Inspector({
             <div className="section-label section-spaced">
               AÇO DAS ARMADURAS
             </div>
-            <NumericField
-              label="Resistência ao escoamento"
-              symbol="fyk"
-              unit="MPa"
-              value={p.materials.fyk}
-              min={250}
-              max={600}
-              onChange={(v) =>
-                update({ ...p, materials: { ...p.materials, fyk: v } })
-              }
-            />
+            <label className="field steel-class-field" htmlFor={steelId}>
+              <span className="field-label">Classe de aço do tirante</span>
+              <select
+                id={steelId}
+                value={p.materials.fyk}
+                aria-describedby={`${steelId}-bond`}
+                onChange={(event) => {
+                  const selected = steelClassOf(Number(event.target.value));
+                  if (selected)
+                    update({
+                      ...p,
+                      materials: { ...p.materials, fyk: fykOf(selected) },
+                    });
+                }}
+              >
+                {!steel && (
+                  <option value={p.materials.fyk} disabled>
+                    {steelLabel(p.materials.fyk)}
+                  </option>
+                )}
+                {steelClasses.map((value) => (
+                  <option key={value} value={fykOf(value)}>
+                    {steelOptionLabel(value)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="table-note steel-bond-note" id={`${steelId}-bond`}>
+              {steelBondDescription(p.materials.fyk)}
+            </p>
             <div className="inspector-tip">
               <Info size={15} />
               <p>
                 Adotados: γc = {coefficientText(p.design.gammaC ?? 1.4)} e γs ={" "}
-                {coefficientText(p.design.gammaS ?? 1.15)}. Tirante: CA-25
-                (250), CA-50 (500) ou CA-60 (600 MPa). Aço transversal e
+                {coefficientText(p.design.gammaS ?? 1.15)}. Aço transversal e
                 exposição na aba Cálculo.
               </p>
             </div>

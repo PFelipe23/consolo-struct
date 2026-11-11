@@ -1,6 +1,10 @@
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
-import { bottomDepth, bottomReach, concreteProfile } from "../domain/profile";
+import {
+  bottomOffsetDepth,
+  bottomReach,
+  concreteProfile,
+} from "../domain/profile";
 import { useId } from "react";
 import { number, type Piece, type GeometryKey } from "../domain/model";
 type Props = {
@@ -324,7 +328,12 @@ export default function Drawing({
                 <g {...groupProps("N2")} fill="none" strokeWidth="2">
                   {stitchLevels.map((y, i) => {
                     const end = cut
-                      ? bottomReach(concrete, y, 0, g.length)
+                      ? bottomReach(
+                          concrete,
+                          y,
+                          g.cover + p.rebar.stitchDiameter / 2,
+                          g.length,
+                        )
                       : g.height === g.tipHeight
                         ? g.length
                         : y <= g.tipHeight
@@ -345,11 +354,15 @@ export default function Drawing({
                       g.cover +
                       ((g.length - 2 * g.cover) * i) /
                         Math.max(1, p.rebar.stirrupCount - 1);
-                    const bottom =
-                      (cut
-                        ? bottomDepth(concrete, x)
-                        : g.height -
-                          ((g.height - g.tipHeight) * x) / g.length) - g.cover;
+                    const bottom = cut
+                      ? bottomOffsetDepth(
+                          concrete,
+                          x,
+                          g.cover + p.rebar.stirrupDiameter / 2,
+                        )
+                      : g.height -
+                        ((g.height - g.tipHeight) * x) / g.length -
+                        g.cover;
                     return (
                       <path key={i} d={`M${X(x)} ${Y(g.cover)}V${Y(bottom)}`} />
                     );

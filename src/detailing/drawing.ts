@@ -12,6 +12,7 @@ import { pinCenters } from "./model";
 import { reactionGeometry } from "../domain/theory";
 import { bottomDepth, concreteProfile } from "../domain/profile";
 import { coefficientText, materialSafety } from "../domain/materialSafety";
+import { steelLabel } from "../domain/steel";
 
 export type Layer =
   | "FORMAS"
@@ -48,7 +49,7 @@ export type Drawing = {
   detail?: Detail;
 };
 export const cm = (mm: number, digits = 1) => number(mm / 10, digits);
-export const grade = (fyk: number) => `CA-${fyk / 10}`;
+export const grade = steelLabel;
 export const barLabel = (b: Bar) =>
   `${b.quantity} ${b.mark} Ø${number(b.diameter, 1)} C=${cm(b.cutLength)}`;
 export const colors: Record<Layer, string> = {

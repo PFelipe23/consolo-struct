@@ -7,6 +7,12 @@ import {
   concreteProfile,
 } from "../domain/profile";
 import {
+  loopPinDefined,
+  requiresSupportHook,
+  steelClassOf,
+  stirrupMandrelDefined,
+} from "../domain/steel";
+import {
   closedStirrup,
   mandrelDiameter,
   roundedPath,
@@ -131,7 +137,8 @@ export function buildDetail(piece: Piece): Detail {
       });
   };
   const mainD = mandrelDiameter(r.tieDiameter, p.materials.fyk);
-  if (p.materials.fyk === 250)
+  const steel = steelClassOf(p.materials.fyk);
+  if (requiresSupportHook(steel))
     issue(
       "smooth-detail",
       "Barras lisas CA-25 exigem ancoragem com gancho semicircular. A forma completa desse gancho não está implementada no gerador; detalhar especificamente antes da execução.",
@@ -173,7 +180,7 @@ export function buildDetail(piece: Piece): Detail {
         "O gancho do tirante não cabe no trecho de suporte representado; reveja projeção, ponta e altura.",
       );
   }
-  if (p.materials.fyk === 600 && r.tieDiameter >= 20)
+  if (!loopPinDefined(steel, r.tieDiameter))
     issue(
       "main-grade",
       "A tabela de mandris não define este diâmetro de CA-60 para a ancoragem adotada.",
@@ -324,8 +331,8 @@ export function buildDetail(piece: Piece): Detail {
   const bottomAt = (x: number, offset: number) =>
     bottomOffsetDepth(concrete, x, offset);
   if (
-    q.fykTransverse === 600 &&
-    (r.stitchDiameter > 10 || r.stirrupDiameter > 10)
+    !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stitchDiameter) ||
+    !stirrupMandrelDefined(steelClassOf(q.fykTransverse), r.stirrupDiameter)
   )
     issue(
       "transverse-mandrel",
@@ -463,20 +470,38 @@ export function buildDetail(piece: Piece): Detail {
   if (s.mounting) {
     const end = g.length - g.cover - s.mountingDiameter / 2;
     const off = g.cover + r.stirrupDiameter + s.mountingDiameter / 2;
-    // Follows every vertex of the bottom face (one bend, or more with the cut).
-    const corners = concrete.bottom
-      .slice(1, -1)
-      .map((v) => v.x)
-      .filter((x) => x > 0 && x < end);
+    const nominalRadius =
+      mandrelDiameter(s.mountingDiameter, q.fykTransverse) / 2 +
+      s.mountingDiameter / 2;
+    // Intersect the parallel inset faces, rather than offsetting at each
+    // original x: that chord/fillet can enter the cover zone near a cut vertex.
+    const lines = concrete.bottom.slice(1).map((v, i) => {
+      const a = concrete.bottom[i];
+      const m = (v.depth - a.depth) / (v.x - a.x);
+      return { m, b: a.depth - m * a.x - off * Math.sqrt(1 + m * m) };
+    });
+    const corners = lines
+      .slice(1)
+      .map((line, i) => {
+        const previous = lines[i];
+        const x = (line.b - previous.b) / (previous.m - line.m);
+        return { x, y: line.m * x + line.b };
+      })
+      .filter((v) => v.x > 0 && v.x < end);
+    // At a re-entrant concrete corner the inset is a circle of radius off.
+    // A fillet at least this large stays on its concrete-interior side.
+    const radius =
+      concrete.status === "removed"
+        ? Math.max(nominalRadius, off)
+        : nominalRadius;
     const path = roundedPath(
       [
         { x: -Math.min(back, g.columnWidth - g.cover), y: bottomAt(0, off) },
         { x: 0, y: bottomAt(0, off) },
-        ...corners.map((x) => ({ x, y: bottomAt(x, off) })),
+        ...corners,
         { x: end, y: bottomAt(end, off) },
       ],
-      mandrelDiameter(s.mountingDiameter, q.fykTransverse) / 2 +
-        s.mountingDiameter / 2,
+      radius,
     );
     add({
       family: "mounting",
@@ -485,7 +510,10 @@ export function buildDetail(piece: Piece): Detail {
       grade: q.fykTransverse,
       quantity: 2,
       path,
-      mandrel: mandrelDiameter(s.mountingDiameter, q.fykTransverse),
+      mandrel:
+        concrete.status === "removed"
+          ? 2 * radius - s.mountingDiameter
+          : mandrelDiameter(s.mountingDiameter, q.fykTransverse),
       width: end + back,
       height: g.height - g.tipHeight,
       hookTail: 0,

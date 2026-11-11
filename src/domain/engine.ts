@@ -23,6 +23,13 @@ import {
   materialSafetyReference,
 } from "./materialSafety";
 import { concreteProfile, excessConcreteLabels, pieceVolume } from "./profile";
+import {
+  bondCoefficientEta1,
+  loopPinDefined,
+  loopPinFactor,
+  requiresSupportHook,
+  steelClassOf,
+} from "./steel";
 
 export const ENGINE_VERSION = "0.4.0";
 export const POLICY = "LC-ELU-2026.2";
@@ -101,6 +108,22 @@ const supportRatios = {
   concreteSteel: 0.4,
   restrained: 0,
 } as const;
+/**
+ * α of lb,nec at the support (NBR 6118 §9.4.2.5): straight 1,0; hook with
+ * normal cover ≥ 3φ 0,7; welded transverse bar 0,7; both 0,5. The welded bar
+ * is a user declaration; its geometry is not verified.
+ */
+export function anchorageAlpha(
+  q: Pick<
+    Piece["design"],
+    "supportAnchor" | "hookNormalCover" | "supportWeldedBar"
+  >,
+  diameter: number,
+): number {
+  const hook = q.supportAnchor === "hook" && q.hookNormalCover >= 3 * diameter;
+  if (hook && q.supportWeldedBar) return 0.5;
+  return hook || q.supportWeldedBar ? 0.7 : 1;
+}
 export function materialProperties(
   fck: number,
   fyk: number,
@@ -417,6 +440,8 @@ function calculateCase(
           : "beam"
       : q.method;
   const isBeam = method === "beam";
+  // calculate() rejects unknown numeric steels before entering this case.
+  const steel = steelClassOf(p.materials.fyk)!;
   const safety = materialSafety(q);
   const coefficientValues = {
     gammaC: safety.gammaC,
@@ -589,19 +614,20 @@ function calculateCase(
     lateralMargin > g.cover ? 0.3 * vertical * (1 - q.bearingWidth / b) : 0;
   const splittingRequired = splittingForce / m.fywd;
   const splittingProvided = 2 * area(q.splittingCount, q.splittingDiameter);
-  const eta1 = p.materials.fyk === 500 ? 2.25 : 1;
+  const eta1 = bondCoefficientEta1(steel);
   const fbd =
     eta1 *
     (q.bond === "good" ? 1 : 0.7) *
     (r.tieDiameter < 32 ? 1 : (132 - r.tieDiameter) / 100) *
     m.fctd;
   const lb = Math.max((r.tieDiameter * m.fyd) / (4 * fbd), 25 * r.tieDiameter);
-  const anchorAlpha =
-    q.supportAnchor === "hook" && q.hookNormalCover >= 3 * r.tieDiameter
-      ? 0.7
-      : 1;
+  const anchorAlpha = anchorageAlpha(q, r.tieDiameter);
+  // The optional floor only replaces a ratio below 1; otherwise the original
+  // expression is kept unchanged (bit-identical results with the floor off).
+  const anchorFloored = q.anchorRatioFloor && tieRequired / asTie < 1;
+  const anchorRatio = anchorFloored ? 1 : tieRequired / asTie;
   const anchorRequired = Math.max(
-    (anchorAlpha * lb * tieRequired) / asTie,
+    anchorFloored ? anchorAlpha * lb : (anchorAlpha * lb * tieRequired) / asTie,
     0.3 * lb,
     10 * r.tieDiameter,
     100,
@@ -614,16 +640,6 @@ function calculateCase(
     r.tieDiameter,
     q.aggregate / 1.2,
   );
-  const loopPinFactor =
-    p.materials.fyk === 250
-      ? r.tieDiameter < 20
-        ? 4
-        : 5
-      : p.materials.fyk === 500
-        ? r.tieDiameter < 20
-          ? 5
-          : 8
-        : 6;
   // Beam branch (1 < a/d ≤ 2): face reinforcement depends on h; N3 pitch is the drawn pitch.
   const beamStitchApplies = g.height <= 600;
   const beamStitchRate = Math.max((0.4 * tieRequired) / d, 0.0015 * b);
@@ -1196,10 +1212,20 @@ function calculateCase(
       anchorRequired,
       q.supportAnchorLength,
       "mm",
-      "lb=max(φfyd/(4fbd);25φ); lb,nec=max(αlb As,calc/As,ef;0,3lb;10φ;100)",
+      "lb=max(φfyd/(4fbd);25φ); lb,nec=max(α·lb·razão;0,3lb;10φ;100)",
       refs.anchor,
+      `α = ${number(anchorAlpha, 1)} (reta 1,0; gancho com cobrimento normal ≥ 3φ 0,7; barra transversal soldada 0,7; gancho e soldada 0,5); razão As,req/As,ef = ${Number.isFinite(anchorRatio) ? number(anchorRatio, 3) : "indeterminada"}${q.anchorRatioFloor ? " (limitada ao mínimo de 1,0, opção conservadora)" : " (sem piso)"}; lb = ${number(lb, 1)} mm.`,
     ),
   );
+  if (q.supportWeldedBar)
+    add(
+      note(
+        "anchorWeldedBar",
+        "Barra transversal soldada na ancoragem",
+        "Conferir diâmetro, posição e execução da barra transversal soldada conforme NBR 6118 §9.4.2.2; o programa não verifica a geometria.",
+        "NBR 6118 §9.4.2.2 e §9.4.2.5",
+      ),
+    );
   add(
     check(
       "anchorConfinement",
@@ -1236,7 +1262,7 @@ function calculateCase(
         "Compatibilidade geométrica; NBR 6118 §9.4",
       ),
     );
-    if (p.materials.fyk === 250)
+    if (requiresSupportHook(steel))
       add(
         note(
           "smoothHook",
@@ -1260,7 +1286,7 @@ function calculateCase(
       check(
         "loopPin",
         "Diâmetro interno da alça horizontal",
-        loopPinFactor * r.tieDiameter,
+        loopPinFactor(steel, r.tieDiameter) * r.tieDiameter,
         q.loopInternalDiameter,
         "mm",
         "D ≥ kφ (tabela 9.1)",
@@ -1288,7 +1314,7 @@ function calculateCase(
           "fail",
         ),
       );
-    if (p.materials.fyk === 600 && r.tieDiameter >= 20)
+    if (!loopPinDefined(steel, r.tieDiameter))
       add(
         note(
           "loopSteel",
@@ -1435,6 +1461,9 @@ function calculateCase(
     anchorRequired,
     lb,
     anchorAlpha,
+    anchorRatio,
+    anchorRatioFloor: q.anchorRatioFloor ? 1 : 0,
+    anchorWeldedBar: q.supportWeldedBar ? 1 : 0,
     fbd,
     confinementRequired,
     a2,
@@ -1508,6 +1537,9 @@ function calculateCase(
       anchorRequired,
       lb,
       anchorAlpha,
+      anchorRatio,
+      anchorRatioFloor: q.anchorRatioFloor ? 1 : 0,
+      anchorWeldedBar: q.supportWeldedBar ? 1 : 0,
       fbd,
       confinementRequired,
       a2,
@@ -1654,7 +1686,7 @@ export function calculate(p: Piece): CalculationResult {
     unsupported.push(
       "Consolo curto com junta de concretagem requer modelo adicional da interface; adote análise específica.",
     );
-  if (![250, 500, 600].includes(p.materials.fyk))
+  if (!steelClassOf(p.materials.fyk))
     unsupported.push(
       "O motor admite aço do tirante CA-25, CA-50 ou CA-60; informe fyk 250, 500 ou 600 MPa.",
     );
@@ -1756,6 +1788,7 @@ export function calculate(p: Piece): CalculationResult {
     "suspensionRequired",
     "splittingRequired",
     "anchorRequired",
+    "anchorRatio",
   ]) {
     const all = combinations.map((c) => c.values[key]);
     // Indeterminate in any combination ⇒ indeterminate envelope (key omitted).

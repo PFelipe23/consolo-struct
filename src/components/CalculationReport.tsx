@@ -26,6 +26,21 @@ const valueText = (value: number | undefined, digits = 3) =>
   value === undefined || !Number.isFinite(value)
     ? "indeterminado"
     : number(value, digits);
+/** α, the ratio actually used (with or without the 1,0 floor) and lb of the support anchorage. */
+const anchorageRows = (
+  v: CaseResult["values"],
+): [string, number | undefined, string][] => [
+  ["lb básico", v.lb, "mm"],
+  ["α da ancoragem no suporte", v.anchorAlpha, ""],
+  [
+    v.anchorRatioFloor
+      ? "Razão As,req/As,ef usada (mínimo 1,0)"
+      : "Razão As,req/As,ef usada (sem piso)",
+    v.anchorRatio,
+    "",
+  ],
+  ["Ancoragem necessária", v.anchorRequired, "mm"],
+];
 function BeamMemory({ c }: { c: CaseResult }) {
   const v = c.values;
   const rows: [string, number | undefined, string][] = [
@@ -73,7 +88,7 @@ function BeamMemory({ c }: { c: CaseResult }) {
           ["Armadura de pele por face", v.beam_skinPerFace, "mm²"],
           ["Armadura de pele total", v.beam_skinTotal, "mm²"],
         ] as [string, number | undefined, string][])),
-    ["Ancoragem necessária", v.anchorRequired, "mm"],
+    ...anchorageRows(v),
   ];
   return (
     <>
@@ -297,7 +312,7 @@ function CalculationReport({
                           "mm²",
                         ],
                         ["Taxa da costura", c.values.stitchRate, "mm²/mm"],
-                        ["Ancoragem necessária", c.values.anchorRequired, "mm"],
+                        ...anchorageRows(c.values),
                       ].map(([label, value, unit]) => (
                         <div key={String(label)}>
                           <span>{label}</span>

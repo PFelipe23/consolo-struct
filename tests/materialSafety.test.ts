@@ -17,8 +17,7 @@ import { suggestReinforcement } from "../src/domain/autodesign";
 
 describe("Coeficientes dos materiais — resistências em MPa", () => {
   // Resultados completos capturados antes desta alteração, no upstream 41c3a12.
-  // Excluem-se somente os quatro novos campos de metadados de coeficientes e o
-  // eco da opção de recorte do concreto excedente.
+  // Excluem-se somente os quatro novos campos de metadados de coeficientes.
   it.each([
     [
       "friction",
@@ -50,18 +49,31 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
       const legacy = JSON.parse(JSON.stringify(p));
       delete legacy.design.gammaC;
       delete legacy.design.gammaS;
+      // Projeto anterior ao recorte: campo ausente, sem normalizar o fingerprint.
+      delete legacy.design.excessConcrete;
+      // Issue #12: options off by default; only metadata and the anchorage
+      // text (formula, α/ratio/lb detail) are new, the numbers are unchanged.
+      delete legacy.design.supportWeldedBar;
+      delete legacy.design.anchorRatioFloor;
       const metadata = new Set([
         "gammaC",
         "gammaS",
         "gammaCReference",
         "gammaSReference",
+        "anchorRatio",
+        "anchorRatioFloor",
+        "anchorWeldedBar",
       ]);
       const raw = JSON.stringify(calculate(legacy), (key, value) =>
         metadata.has(key)
           ? undefined
-          : key === "fingerprint"
-            ? // Opção de recorte no padrão "keep": eco da entrada, sem efeito numérico.
-              String(value).replace(',"excessConcrete":"keep"', "")
+          : value?.id === "anchorage"
+            ? {
+                ...value,
+                formula:
+                  "lb=max(φfyd/(4fbd);25φ); lb,nec=max(αlb As,calc/As,ef;0,3lb;10φ;100)",
+                detail: value.detail.replace(/α = .*lb = [\d.,]+ mm\./, ""),
+              }
             : value,
       );
       expect(createHash("sha256").update(raw).digest("hex")).toBe(expected);

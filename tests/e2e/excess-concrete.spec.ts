@@ -67,3 +67,35 @@ test("Configurações alterna manter/remover, atualiza a geometria e participa d
   const reopened = await openSettings(page);
   await expect(option(reopened, "Manter concreto excedente")).toBeChecked();
 });
+
+test("fechar mantém a edição imediata; desfazer/refazer e reabrir preservam a opção", async ({
+  page,
+}) => {
+  const before = await saved(page);
+  const dialog = await openSettings(page);
+  await option(dialog, "Remover concreto excedente").check();
+  await option(dialog, "Remover concreto excedente").check();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  const project = await saved(page);
+  expect(project.pieces[0]).toEqual({
+    ...before.pieces[0],
+    design: { ...before.pieces[0].design, excessConcrete: "remove" },
+  });
+  expect(project.pieces[1]).toEqual(before.pieces[1]);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator(".excess-concrete-outline")).toHaveCount(0);
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.locator(".excess-concrete-outline").first()).toBeAttached();
+  await page
+    .getByLabel("Abrir arquivo de projeto")
+    .setInputFiles({
+      name: "recorte.consolo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
+  const reopened = await openSettings(page);
+  await expect(option(reopened, "Remover concreto excedente")).toBeChecked();
+  await page.keyboard.press("Escape");
+  expect((await saved(page)).pieces).toEqual(project.pieces);
+});

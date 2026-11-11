@@ -22,9 +22,11 @@ O cálculo é explícito pelo botão; o desenho responde imediatamente à geomet
 
 ## Busca discreta
 
-Pesquisa φ 6,3/8/10/12,5/16/20/25 mm, até 24 ramos e 3 camadas. Alças exigem ramos pares por camada. Recalcula o centroide, classificação e resistências em cada candidato. Filtra armadura principal, resistência do concreto e compatibilidades geométricas básicas; seleciona menor área, com desempate por camadas/contagem. Ajusta as quantidades secundárias às áreas e espaçamentos máximos e verifica novamente.
+Pesquisa φ 6,3/8/10/12,5/16/20/25 mm em ordem crescente, até 24 ramos e 3 camadas. Alças exigem ramos pares por camada. Recalcula o centroide, classificação e resistências em cada candidato, dimensiona suas quantidades de armadura secundária e recalcula antes de julgá-lo. Filtra armadura principal, concreto, compatibilidade geométrica e as verificações secundárias descritas nos critérios de cálculo. A pontuação continua `área + camadas·0,001 + contagem·0,00001`.
 
-A busca não é otimizador executivo: não muda seção, aparelhos, diâmetro interno da alça, bitolas secundárias, procedimento de solda, barras do suporte, dados de exposição ou confirmações de execução. Pode devolver arranjo com pendências secundárias, explicitamente mostrado. Uma busca sem solução não altera o projeto. Uma sugestão inteira é uma operação reversível no histórico.
+Para cada bitola, testa todas as camadas da primeira contagem viável e encerra essa bitola. Uma contagem que falha não encerra a bitola. A poda só interrompe contagens com área **estritamente maior** que a melhor área encontrada; áreas iguais continuam participando do desempate. `candidates` conta os arranjos efetivamente avaliados após os descartes geométricos, não as chamadas repetidas ao motor.
+
+A busca não é otimizador executivo: não muda seção, aparelhos, diâmetro interno da alça, bitolas secundárias, procedimento de solda, barras do suporte, dados de exposição ou confirmações de execução. Pode devolver arranjo com pendências externas ao conjunto crítico ou com conferências `review`, explicitamente mostradas. Sem solução, cita os rótulos críticos comuns a todos os candidatos; sem interseção, cita as falhas do último arranjo avaliado da maior bitola. Domínios sem resultado calculável são explicados pelas razões do motor. Uma busca sem solução não altera o projeto. Uma sugestão inteira é uma operação reversível no histórico.
 
 ## Dados e extensão
 

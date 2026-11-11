@@ -7,7 +7,12 @@ import {
 } from "../domain/engine";
 import { area, number, type Piece, type Project } from "../domain/model";
 import { concreteProfile, pieceVolume } from "../domain/profile";
+import { steelBondDescription, steelLabel } from "../domain/steel";
 
+const anchorRatioLabel = (v: Record<string, number>) =>
+  v.anchorRatioFloor
+    ? "Razao As,req/As,ef usada (minimo 1,0)"
+    : "Razao As,req/As,ef usada (sem piso)";
 export function piecePoints(p: Piece): [number, number][] {
   const g = p.geometry;
   return [
@@ -298,6 +303,10 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
     `fck=${p.materials.fck} MPa; fyk=${p.materials.fyk} MPa. N1=${p.rebar.tieCount} ramos phi ${p.rebar.tieDiameter}; N2=${p.rebar.stitchCount} estribos phi ${p.rebar.stitchDiameter}; N3=${p.rebar.stirrupCount} estribos phi ${p.rebar.stirrupDiameter}.`,
   );
   line(
+    `Tirante: ${steelLabel(p.materials.fyk)}; transversal: ${steelLabel(p.design.fykTransverse)}.`,
+  );
+  line(steelBondDescription(p.materials.fyk));
+  line(
     `Acoes principais: V=${num(p.loads.vertical)} N; H=${num(p.loads.horizontal)} N; gammaf=${p.loads.gamma}. Os parametros completos constam do apendice.`,
   );
   title("3. Envelope de verificacoes");
@@ -383,6 +392,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
         ["As suspensao", v.suspensionRequired, "mm2"],
         ["fbd", v.fbd, "MPa"],
         ["lb basico", v.lb, "mm"],
+        ["alfa da ancoragem no suporte", v.anchorAlpha, ""],
+        [anchorRatioLabel(v), v.anchorRatio, ""],
         ["lb necessario", v.anchorRequired, "mm"],
       ] as [string, number | undefined, string][])
         line(`${label} = ${beamNum(val)} ${val === undefined ? "" : unit}`, 9);
@@ -463,6 +474,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       ["As suspensao", v.suspensionRequired, "mm2"],
       ["fbd", v.fbd, "MPa"],
       ["lb basico", v.lb, "mm"],
+      ["alfa da ancoragem no suporte", v.anchorAlpha, ""],
+      [anchorRatioLabel(v), v.anchorRatio, ""],
       ["lb necessario", v.anchorRequired, "mm"],
       ...(c.method === "strut"
         ? [

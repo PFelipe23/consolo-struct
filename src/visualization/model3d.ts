@@ -1,7 +1,11 @@
 import { number, type GeometryKey, type Piece } from "../domain/model";
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
-import { bottomDepth, bottomReach, concreteProfile } from "../domain/profile";
+import {
+  bottomOffsetDepth,
+  bottomReach,
+  concreteProfile,
+} from "../domain/profile";
 
 /** World coordinates in mm: X = corbel length, Y = width, Z = up. */
 export type Point3 = [number, number, number];
@@ -223,8 +227,13 @@ export function buildSceneModel(p: Piece): SceneModel {
     const end =
       concrete.status === "removed"
         ? Math.min(
-            g.length - g.cover,
-            bottomReach(concrete, depth, g.cover, g.length),
+            g.length - g.cover - r.stitchDiameter / 2,
+            bottomReach(
+              concrete,
+              depth,
+              g.cover + r.stitchDiameter / 2,
+              g.length,
+            ),
           )
         : g.height === g.tipHeight || depth <= g.tipHeight - g.cover
           ? g.length - g.cover
@@ -251,11 +260,12 @@ export function buildSceneModel(p: Piece): SceneModel {
     const y = side - g.cover - r.stirrupDiameter / 2;
     const top = -g.cover - r.stirrupDiameter / 2;
     const bottom =
-      (concrete.status === "removed"
-        ? -bottomDepth(concrete, x)
-        : -g.height + ((g.height - g.tipHeight) * x) / g.length) +
-      g.cover +
-      r.stirrupDiameter / 2;
+      concrete.status === "removed"
+        ? -bottomOffsetDepth(concrete, x, g.cover + r.stirrupDiameter / 2)
+        : -g.height +
+          ((g.height - g.tipHeight) * x) / g.length +
+          g.cover +
+          r.stirrupDiameter / 2;
     steel.push({
       id: "N3",
       diameter: r.stirrupDiameter,

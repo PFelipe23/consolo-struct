@@ -1399,6 +1399,13 @@ rect.steel,
 .inspector .field-label {
   line-height: 1.4;
 }
+.inspector .steel-class-field {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px 10px;
+}
+.inspector .steel-bond-note {
+  margin: 10px;
+}
 .inspector-tip,
 .info-block {
   color: var(--muted);

@@ -7,6 +7,7 @@ import {
   segmentPoints,
 } from "./drawing";
 import { steelMass } from "./geometry";
+import { steelLabel } from "../domain/steel";
 
 export const escapeXml = (s: string) =>
   s.replace(
@@ -299,7 +300,7 @@ export function steelCsv(details: Detail[]): string {
         d.piece.quantity,
         b.mark,
         b.description,
-        `CA-${b.grade / 10}`,
+        steelLabel(b.grade),
         b.diameter,
         b.quantity,
         b.quantity * d.piece.quantity,
