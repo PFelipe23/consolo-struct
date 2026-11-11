@@ -450,8 +450,11 @@ h4 {
   border-bottom: 1px solid var(--border);
   gap: 1px;
   padding-left: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 .ribbon-tabs > button {
+  flex-shrink: 0;
   height: 31px;
   padding: 0 17px;
   border-bottom: 2px solid transparent;
@@ -520,7 +523,7 @@ h4 {
   grid-row: span 3;
   flex-direction: column;
   justify-content: center;
-  width: 72px;
+  width: 88px;
   gap: 5px;
   padding: 3px;
   font-size: 11px;

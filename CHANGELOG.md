@@ -2,6 +2,13 @@
 
 Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pressupõe que existam tags, releases publicadas ou instaladores para cada versão.
 
+## Não lançado
+
+- Simplifica o ribbon de 63 para 47 posições, preservando as 39 ações. Início reúne oito atalhos do fluxo frequente; Modelo concentra a edição completa, inclusive Excluir; Documentação concentra documentos e saídas diretas.
+- Centraliza rótulos, ícones e ajuda em um catálogo tipado. Padroniza Salvar projeto e Detalhamento e distingue edição de armaduras/ações da visibilidade das vistas. Mantém controles contextuais e exportadores especializados.
+- Preserva alturas do ribbon, permite rolagem das abas e melhora a legibilidade dos botões. Expõe estados dos modos locais e retorna o foco ao comando que abriu um diálogo.
+- Mantém Tema em Exibir enquanto Configurações (#7) não estiver integrada à master. Nenhuma alteração no motor, formato de projeto, unidades ou conteúdo das exportações.
+
 ## 0.7.1
 
 - Corrige o rótulo antigo do motor na barra de status: a interface passa a usar a versão real do núcleo de cálculo.

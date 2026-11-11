@@ -117,7 +117,9 @@ export default function Viewport({
   useEffect(() => {
     const editable = (target: EventTarget | null) =>
       target instanceof Element &&
-      !!target.closest("input,textarea,select,[contenteditable],[role=dialog]");
+      !!target.closest(
+        "input,textarea,select,.ribbon,[contenteditable],[role=dialog]",
+      );
     const keydown = (e: KeyboardEvent) => {
       if (editable(e.target) || document.querySelector("[role=dialog]")) return;
       if (e.code === "Space") {
@@ -323,6 +325,7 @@ export default function Viewport({
           className={mode === "select" ? "active" : ""}
           title="Selecionar e editar cotas"
           aria-label="Selecionar no desenho"
+          aria-pressed={mode === "select"}
           onClick={() => onMode("select")}
         >
           <MousePointer2 size={18} />
@@ -331,6 +334,7 @@ export default function Viewport({
           className={mode === "pan" ? "active" : ""}
           title="Pan · Espaço + arrastar"
           aria-label="Pan no desenho"
+          aria-pressed={mode === "pan"}
           onClick={() => onMode("pan")}
         >
           <Hand size={18} />

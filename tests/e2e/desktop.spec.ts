@@ -146,13 +146,21 @@ test("ribbon, redimensionamento dos painéis, camadas e temas", async ({
   await expect(page.getByLabel("Altura no pilar")).toBeVisible();
   await page.getByRole("tab", { name: "Exibir", exact: true }).click();
   const ribbon = page.locator(".ribbon-panel");
-  await ribbon.getByRole("button", { name: "Cotas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cotas", exact: true })
+    .click();
   await expect(page.locator(".dimension")).toHaveCount(0);
-  await ribbon.getByRole("button", { name: "Cotas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cotas", exact: true })
+    .click();
   await expect(page.locator(".dimension")).toHaveCount(5);
-  await ribbon.getByRole("button", { name: "Cargas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cargas", exact: true })
+    .click();
   await expect(page.locator(".force-label")).toHaveCount(0);
-  await ribbon.getByRole("button", { name: "Cargas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cargas", exact: true })
+    .click();
   await expect(page.locator(".force-label")).toHaveCount(2);
   await expect(page.locator(".canvas")).toHaveCSS(
     "background-color",

@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import Viewport, { type ViewportHandle } from "./components/Viewport";
 import Ribbon, { type Action, type RibbonTab } from "./components/Ribbon";
+import { ribbonCommands } from "./components/ribbonCommands";
 import PanelResizer from "./components/PanelResizer";
 import Inspector from "./components/Inspector";
 import ProjectBrowser from "./components/ProjectBrowser";
@@ -180,6 +181,7 @@ export default function App() {
     quantity: 1,
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalReturnFocus = useRef<HTMLElement | null>(null);
   const hasEdited = useRef(false);
   const errors = useMemo(() => geometryErrors(p), [p]);
   const result = results[p.id];
@@ -662,8 +664,8 @@ export default function App() {
           </button>
           <button
             className="icon-button"
-            title="Salvar · Ctrl+S"
-            aria-label="Salvar"
+            title={`${ribbonCommands.save.tip} · Ctrl+S`}
+            aria-label={ribbonCommands.save.label}
             onClick={() => void saveProject()}
           >
             <Save size={16} />
@@ -702,6 +704,7 @@ export default function App() {
           <button
             className="icon-button"
             aria-label="Alternar tema"
+            aria-pressed={theme === "dark"}
             title={theme === "light" ? "Usar tema escuro" : "Usar tema claro"}
             onClick={() => action("theme")}
           >
@@ -1117,6 +1120,24 @@ export default function App() {
           <Dialog.Overlay className="modal-overlay" />
           <Dialog.Content
             className={`modal-content ${modal === "export" ? "export-modal" : ""}`}
+            onOpenAutoFocus={() => {
+              modalReturnFocus.current =
+                document.activeElement instanceof HTMLElement
+                  ? document.activeElement
+                  : null;
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const target = modalReturnFocus.current;
+              if (target?.isConnected && !target.matches(":disabled"))
+                target.focus();
+              else
+                document
+                  .querySelector<HTMLElement>(
+                    '.ribbon-tabs [aria-selected="true"]',
+                  )
+                  ?.focus();
+            }}
           >
             <Dialog.Title>
               {modal === "project" || modal === "newProject"
@@ -1302,15 +1323,15 @@ export default function App() {
                       {
                         id: "json",
                         name: "Projeto editável",
-                        ext: ".lume.json",
-                        desc: "Todas as peças e parâmetros",
+                        ext: ".consolo.json",
+                        desc: "Projeto reabrível com todas as peças e parâmetros",
                         icon: FileJson,
                       },
                       {
                         id: "calc",
                         name: "Cálculo auditável",
                         ext: ".calc.json",
-                        desc: "Entradas, equações e precisão completa",
+                        desc: "Entradas e resultados; não reabre como projeto",
                         icon: FileJson,
                       },
                       {
@@ -1324,7 +1345,7 @@ export default function App() {
                         id: "svg",
                         name: "Geometria vetorial",
                         ext: ".svg",
-                        desc: "Contorno do consolo e pilar",
+                        desc: "Contorno do consolo e pilar em milímetros",
                         icon: Ruler,
                       },
                       {
@@ -1338,7 +1359,7 @@ export default function App() {
                         id: "csv",
                         name: "Lista de quantidades",
                         ext: ".csv",
-                        desc: "Geometria e armadura informada",
+                        desc: "Quantidades do projeto; não é quadro de corte",
                         icon: ClipboardList,
                       },
                     ] as const

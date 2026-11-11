@@ -482,7 +482,7 @@ export default function ThreeViewport(props: Props) {
       if (
         e.target instanceof Element &&
         e.target.closest(
-          "input,textarea,select,button,[role=dialog],[contenteditable]",
+          "input,textarea,select,button,.ribbon,[role=dialog],[contenteditable]",
         )
       )
         return;
