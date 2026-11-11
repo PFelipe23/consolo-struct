@@ -1,4 +1,5 @@
 import DesignPanel from "./DesignPanel";
+import { ribbonCommands } from "./ribbonCommands";
 import { memo } from "react";
 import {
   ChevronDown,
@@ -73,6 +74,8 @@ function Inspector({
         {tabs.map((t) => (
           <button
             key={t.id}
+            aria-label={ribbonCommands[t.id].label}
+            title={ribbonCommands[t.id].tip}
             aria-pressed={tab === t.id}
             onClick={() => setTab(t.id)}
             className={tab === t.id ? "active" : ""}

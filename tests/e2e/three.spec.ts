@@ -111,7 +111,9 @@ test("edita a cota 3D e mantém elevação, arquivo e histórico sincronizados",
   await field.press("Escape");
   await expect(field).not.toBeVisible();
   const event = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Salvar projeto", exact: true })
+    .click();
   const file = await event;
   const saved = JSON.parse(await readFile((await file.path())!, "utf8"));
   expect(saved.schemaVersion).toBe(4);
@@ -133,13 +135,23 @@ test("camadas e tema afetam também a vista 3D, sem alterar o projeto", async ({
   const before = await view.getAttribute("data-camera");
   await page.getByRole("tab", { name: "Exibir", exact: true }).click();
   const ribbon = page.locator(".ribbon-panel");
-  await ribbon.getByRole("button", { name: "Cotas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cotas", exact: true })
+    .click();
   await expect(view.locator(".three-dimension-label")).toHaveCount(0);
-  await ribbon.getByRole("button", { name: "Cargas", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cargas", exact: true })
+    .click();
   await expect(view.locator(".three-force-label")).toHaveCount(0);
-  await ribbon.getByRole("button", { name: "Cotas", exact: true }).click();
-  await ribbon.getByRole("button", { name: "Cargas", exact: true }).click();
-  await ribbon.getByRole("button", { name: "Armaduras", exact: true }).click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cotas", exact: true })
+    .click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar cargas", exact: true })
+    .click();
+  await ribbon
+    .getByRole("button", { name: "Mostrar armaduras", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Alternar tema", exact: true })
     .click();

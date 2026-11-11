@@ -26,12 +26,16 @@ test("edita, desfaz, salva, reabre, revisa e exporta", async ({
     page.getByText("Cálculo desatualizado", { exact: true }),
   ).toBeVisible();
   const dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Salvar projeto", exact: true })
+    .click();
   const saved = await dl;
   const savedPath = await saved.path();
   const json = JSON.parse(await readFile(savedPath!, "utf8"));
   expect(json.pieces[0].geometry.height).toBe(455);
+  await page.getByRole("tab", { name: "Modelo", exact: true }).click();
   await page.getByRole("button", { name: "Duplicar", exact: true }).click();
+  await page.getByRole("tab", { name: "Início", exact: true }).click();
   await expect(page.getByRole("heading", { name: /C03/ })).toBeVisible();
   await page.getByLabel("Abrir arquivo de projeto").setInputFiles(savedPath!);
   await expect(
@@ -59,7 +63,7 @@ test("edita, desfaz, salva, reabre, revisa e exporta", async ({
   ).toBeVisible();
   await page
     .locator(".inspector-tabs")
-    .getByRole("button", { name: "Armaduras", exact: true })
+    .getByRole("button", { name: "Editar armaduras", exact: true })
     .click();
   await page.getByLabel("Diâmetro N1").selectOption("25");
   await expect(page.locator(".provided-area").first()).toContainText("19,63");
@@ -97,7 +101,7 @@ test("edita, desfaz, salva, reabre, revisa e exporta", async ({
   await expect(page.getByLabel("Diâmetro N1")).not.toBeVisible();
   await page
     .locator(".inspector-tabs")
-    .getByRole("button", { name: "Armaduras", exact: true })
+    .getByRole("button", { name: "Editar armaduras", exact: true })
     .click();
   await expect(page.getByLabel("Diâmetro N1")).toHaveValue("25");
   expect(errors).toEqual([]);

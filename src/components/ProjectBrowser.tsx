@@ -15,6 +15,7 @@ import {
 import type { Piece, Project } from "../domain/model";
 import type { DocumentId } from "../domain/documents";
 import QuantityEditor from "./QuantityEditor";
+import { ribbonCommands } from "./ribbonCommands";
 type Props = {
   project: Project;
   selected: string;
@@ -204,10 +205,11 @@ function ProjectBrowser({
         </button>
         <button
           className={active === "details" ? "active" : ""}
+          title={ribbonCommands.details.tip}
           onClick={() => onView("details")}
         >
           <Ruler size={15} />
-          Detalhes e quadro de aço
+          {ribbonCommands.details.label}
         </button>
       </nav>
       <div className="browser-footer">

@@ -1,165 +1,13 @@
 import { useRef } from "react";
 import {
-  Box,
-  MousePointer2,
-  Hand,
-  Plus,
-  Copy,
-  PencilLine,
-  Trash2,
-  FolderOpen,
-  Save,
-  FilePlus2,
-  FileText,
-  FileJson,
-  Download,
-  Ruler,
-  Layers3,
-  ArrowDownToLine,
-  SlidersHorizontal,
-  ListChecks,
-  Maximize,
-  ZoomIn,
-  ZoomOut,
-  Grid2X2,
-  PanelLeft,
-  PanelRight,
-  PanelBottom,
-  Moon,
-  Sun,
-  Table2,
-  Workflow,
-  BookOpen,
-  Camera,
-  Palette,
-  Type,
-  Tag,
-  type LucideIcon,
-} from "lucide-react";
+  ribbonCommands,
+  ribbonGroups,
+  ribbonTabs,
+  type Action,
+  type RibbonTab,
+} from "./ribbonCommands";
+export type { Action, RibbonTab } from "./ribbonCommands";
 
-export type RibbonTab =
-  | "Arquivo"
-  | "Início"
-  | "Modelo"
-  | "Exibir"
-  | "Documentação"
-  | "Configurações";
-export type Action =
-  | "new"
-  | "open"
-  | "save"
-  | "project"
-  | "add"
-  | "duplicate"
-  | "rename"
-  | "delete"
-  | "select"
-  | "pan"
-  | "geometry"
-  | "loads"
-  | "materials"
-  | "rebar"
-  | "elevation"
-  | "section"
-  | "three"
-  | "fit"
-  | "zoomIn"
-  | "zoomOut"
-  | "calculate"
-  | "autodesign"
-  | "design"
-  | "export"
-  | "dimensions"
-  | "steel"
-  | "forces"
-  | "grid"
-  | "browser"
-  | "properties"
-  | "checks"
-  | "theme"
-  | "pdf"
-  | "dxf"
-  | "svg"
-  | "csv"
-  | "report"
-  | "details"
-  | "pieces";
-type Tool = {
-  kind: "action";
-  id: string;
-  action: Action;
-  label: string;
-  icon: LucideIcon;
-  large?: boolean;
-  tip?: string;
-  pressed?: boolean;
-};
-type FutureTool = {
-  kind: "future";
-  id: string;
-  label: string;
-  icon: LucideIcon;
-};
-type Group = {
-  id?: string;
-  label: string;
-  description?: string;
-  tools: (Tool | FutureTool)[];
-};
-type SettingsGroup = Group & { id: string; description: string };
-const tool = (
-  action: Action,
-  label: string,
-  icon: LucideIcon,
-  large = false,
-  tip?: string,
-): Tool => ({ kind: "action", id: action, action, label, icon, large, tip });
-const future = (id: string, label: string, icon: LucideIcon): FutureTool => ({
-  kind: "future",
-  id,
-  label,
-  icon,
-});
-const drawing = [
-  tool("dimensions", "Cotas", Ruler),
-  tool("steel", "Armaduras", Workflow),
-  tool("forces", "Cargas", ArrowDownToLine),
-  tool("grid", "Grade", Grid2X2),
-];
-const modeling = [
-  tool("geometry", "Geometria", Ruler),
-  tool("loads", "Ações", ArrowDownToLine),
-  tool("materials", "Materiais", Layers3),
-  tool("rebar", "Armaduras", Workflow),
-];
-const navigation = [
-  tool(
-    "select",
-    "Selecionar",
-    MousePointer2,
-    true,
-    "Selecionar elementos e editar cotas",
-  ),
-  tool(
-    "pan",
-    "Pan",
-    Hand,
-    true,
-    "Arrastar a vista · botão do meio ou Espaço + arrastar",
-  ),
-];
-const views = [
-  tool("elevation", "Elevação", Ruler),
-  tool("section", "Seção A–A", Layers3),
-  tool("three", "Vista 3D", Box),
-  tool(
-    "fit",
-    "Ajustar à tela",
-    Maximize,
-    true,
-    "Enquadrar todo o desenho · tecla F",
-  ),
-];
 export default function Ribbon({
   tab,
   setTab,
@@ -170,224 +18,16 @@ export default function Ribbon({
 }: {
   tab: RibbonTab;
   setTab: (tab: RibbonTab) => void;
-  onAction: (a: Action) => void;
+  onAction: (action: Action) => void;
   active: Partial<Record<Action, boolean>>;
   dark: boolean;
   canDelete: boolean;
 }) {
-  const tabs: RibbonTab[] = [
-    "Arquivo",
-    "Início",
-    "Modelo",
-    "Exibir",
-    "Documentação",
-    "Configurações",
-  ];
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const settings: SettingsGroup[] = [
-    {
-      id: "general",
-      label: "Geral / Aparência",
-      description: "Aplicativo · aparência",
-      tools: [
-        { ...tool("theme", "Tema escuro", Moon), pressed: dark },
-        future("general-preferences", "Preferências gerais", SlidersHorizontal),
-      ],
-    },
-    {
-      id: "drawing",
-      label: "Desenho",
-      description: "Vista · elementos do desenho",
-      tools: [
-        ...drawing,
-        future("drawing-colors", "Cores", Palette),
-        future("drawing-widths", "Espessuras", PencilLine),
-        future("drawing-dimensions", "Estilo de cotas", Ruler),
-      ],
-    },
-    {
-      id: "three",
-      label: "Modelo 3D",
-      description: "Visualização · itens futuros",
-      tools: [
-        future("three-display", "Preferências de visualização", Box),
-        future("three-camera", "Câmera padrão", Camera),
-      ],
-    },
-    {
-      id: "design",
-      label: "Dimensionamento",
-      description: "Padrões futuros e dados da peça",
-      tools: [
-        future(
-          "design-defaults",
-          "Padrões gerais de dimensionamento",
-          SlidersHorizontal,
-        ),
-        tool("design", "Critérios da peça selecionada", SlidersHorizontal),
-      ],
-    },
-    {
-      id: "detailing",
-      label: "Detalhamento",
-      description: "Apresentação · itens futuros",
-      tools: [
-        future("detailing-display", "Padrões de apresentação", Layers3),
-        future("detailing-text", "Textos", Type),
-        future("detailing-dimensions", "Cotas do detalhamento", Ruler),
-        future("detailing-bars", "Identificação de barras", Tag),
-      ],
-    },
-  ];
-  const groups: Record<RibbonTab, Group[]> = {
-    Arquivo: [
-      {
-        label: "Projeto",
-        tools: [
-          tool("new", "Novo projeto", FilePlus2, true),
-          tool("open", "Abrir", FolderOpen, true),
-          tool("save", "Salvar", Save, true),
-        ],
-      },
-      {
-        label: "Informações",
-        tools: [tool("project", "Dados do projeto", SlidersHorizontal, true)],
-      },
-      {
-        label: "Saída",
-        tools: [
-          tool("export", "Exportar", Download, true),
-          tool("pdf", "Memória PDF", FileText),
-          tool("csv", "Quantidades CSV", Table2),
-        ],
-      },
-    ],
-    Início: [
-      { label: "Navegação", tools: navigation },
-      {
-        label: "Peças",
-        tools: [
-          tool("add", "Novo consolo", Plus, true),
-          tool("duplicate", "Duplicar", Copy),
-          tool("rename", "Identificação", PencilLine),
-          tool("delete", "Excluir", Trash2),
-        ],
-      },
-      { label: "Propriedades", tools: modeling },
-      { label: "Vistas", tools: views },
-      {
-        label: "Dimensionamento",
-        tools: [
-          tool("calculate", "Calcular", ListChecks, true),
-          tool("autodesign", "Sugerir armaduras", Layers3),
-          tool("design", "Critérios de cálculo", SlidersHorizontal),
-        ],
-      },
-      {
-        label: "Documentação",
-        tools: [
-          tool("details", "Detalhamento", Ruler, true),
-          tool("export", "Exportar", Download, true),
-        ],
-      },
-    ],
-    Modelo: [
-      { label: "Navegação", tools: navigation },
-      {
-        label: "Parâmetros da peça",
-        tools: modeling.map((t) => ({ ...t, large: true })),
-      },
-      {
-        label: "Organização",
-        tools: [
-          tool("add", "Novo consolo", Plus, true),
-          tool("duplicate", "Duplicar", Copy),
-          tool("rename", "Identificação", PencilLine),
-        ],
-      },
-      {
-        label: "Dimensionamento",
-        tools: [
-          tool("calculate", "Calcular", ListChecks, true),
-          tool("autodesign", "Sugerir armaduras", Layers3),
-          tool("design", "Critérios de cálculo", SlidersHorizontal),
-        ],
-      },
-    ],
-    Exibir: [
-      {
-        label: "Vistas",
-        tools: [
-          tool("elevation", "Elevação", Ruler),
-          tool("section", "Seção A–A", Layers3),
-          tool("three", "Vista 3D", Box),
-        ],
-      },
-      {
-        label: "Navegação",
-        tools: [
-          ...navigation,
-          tool("fit", "Ajustar à tela", Maximize, true),
-          tool("zoomIn", "Aumentar zoom", ZoomIn),
-          tool("zoomOut", "Diminuir zoom", ZoomOut),
-        ],
-      },
-      {
-        label: "Elementos do desenho",
-        tools: drawing,
-      },
-      {
-        label: "Painéis",
-        tools: [
-          tool("browser", "Navegador do projeto", PanelLeft),
-          tool("properties", "Propriedades", PanelRight),
-          tool("checks", "Verificações", PanelBottom),
-        ],
-      },
-      {
-        label: "Aparência",
-        tools: [
-          tool(
-            "theme",
-            dark ? "Tema claro" : "Tema escuro",
-            dark ? Sun : Moon,
-            true,
-          ),
-        ],
-      },
-    ],
-    Documentação: [
-      {
-        label: "Documentos",
-        tools: [
-          tool("report", "Memória", BookOpen, true),
-          tool("pieces", "Peças do projeto", Table2, true),
-          tool("details", "Detalhes e aço", Ruler, true),
-        ],
-      },
-      {
-        label: "Exportação",
-        tools: [
-          tool("pdf", "Memória PDF", FileText, true),
-          tool("dxf", "Geometria DXF", Layers3, true),
-          tool("svg", "Geometria SVG", Ruler, true),
-          tool("csv", "Quantidades CSV", Table2, true),
-        ],
-      },
-      {
-        label: "Projeto editável",
-        tools: [
-          tool("save", "Salvar JSON", FileJson, true),
-          tool("project", "Dados do projeto", SlidersHorizontal, true),
-        ],
-      },
-    ],
-    Configurações: settings,
-  };
   return (
     <div className="ribbon">
       <div className="ribbon-tabs" role="tablist" aria-label="Ferramentas">
-        {tabs.map((t, i) => (
+        {ribbonTabs.map((t, i) => (
           <button
             key={t}
             ref={(el) => {
@@ -402,14 +42,14 @@ export default function Ribbon({
             onClick={() => setTab(t)}
             onKeyDown={(e) => {
               let j = i;
-              if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
+              if (e.key === "ArrowRight") j = (i + 1) % ribbonTabs.length;
               else if (e.key === "ArrowLeft")
-                j = (i - 1 + tabs.length) % tabs.length;
+                j = (i - 1 + ribbonTabs.length) % ribbonTabs.length;
               else if (e.key === "Home") j = 0;
-              else if (e.key === "End") j = tabs.length - 1;
+              else if (e.key === "End") j = ribbonTabs.length - 1;
               else return;
               e.preventDefault();
-              setTab(tabs[j]);
+              setTab(ribbonTabs[j]);
               refs.current[j]?.focus();
             }}
           >
@@ -422,13 +62,13 @@ export default function Ribbon({
         className={`ribbon-panel ${tab === "Configurações" ? "settings-panel" : ""}`}
         id="ribbon-panel"
         role="tabpanel"
-        aria-labelledby={`ribbon-${tabs.indexOf(tab)}`}
+        aria-labelledby={`ribbon-${ribbonTabs.indexOf(tab)}`}
         tabIndex={tab === "Configurações" ? 0 : undefined}
       >
-        {groups[tab].map((group) => (
+        {ribbonGroups[tab].map((group) => (
           <section
             className="ribbon-group"
-            key={group.id ?? group.label}
+            key={group.id}
             aria-label={group.label}
             aria-describedby={
               group.description ? `settings-${group.id}-description` : undefined
@@ -443,39 +83,45 @@ export default function Ribbon({
               </p>
             )}
             <div className="ribbon-tools">
-              {group.tools.map((t) =>
-                t.kind === "future" ? (
+              {group.tools.map((tool) => {
+                if ("future" in tool) {
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.future}
+                      className="ribbon-tool small ribbon-future"
+                      disabled
+                    >
+                      <Icon size={17} strokeWidth={1.5} aria-hidden="true" />
+                      <span>{tool.label}</span>
+                      <span className="ribbon-future-status">Em breve</span>
+                    </button>
+                  );
+                }
+                const { action, large } = tool;
+                const command = ribbonCommands[action];
+                const Icon = command.icon;
+                const pressed = action === "theme" ? dark : active[action];
+                return (
                   <button
-                    key={t.id}
-                    className="ribbon-tool small ribbon-future"
-                    disabled
+                    key={action}
+                    data-action={action}
+                    className={`ribbon-tool ${large ? "large" : "small"} ${pressed ? "selected" : ""}`}
+                    aria-label={command.label}
+                    aria-pressed={pressed}
+                    disabled={action === "delete" && !canDelete}
+                    title={command.tip}
+                    onClick={() => onAction(action)}
                   >
-                    <t.icon size={17} strokeWidth={1.5} aria-hidden="true" />
-                    <span>{t.label}</span>
-                    <span className="ribbon-future-status">Em breve</span>
-                  </button>
-                ) : (
-                  <button
-                    key={t.id}
-                    className={`ribbon-tool ${t.large ? "large" : "small"} ${(t.pressed ?? active[t.action]) ? "selected" : ""}`}
-                    aria-label={t.label}
-                    aria-pressed={
-                      t.pressed ??
-                      (t.action in active ? !!active[t.action] : undefined)
-                    }
-                    disabled={t.action === "delete" && !canDelete}
-                    title={t.tip ?? t.label}
-                    onClick={() => onAction(t.action)}
-                  >
-                    <t.icon
-                      size={t.large ? 27 : 17}
+                    <Icon
+                      size={large ? 27 : 17}
                       strokeWidth={1.5}
                       aria-hidden="true"
                     />
-                    <span>{t.label}</span>
+                    <span>{command.label}</span>
                   </button>
-                ),
-              )}
+                );
+              })}
             </div>
             <div className="ribbon-group-label">{group.label}</div>
           </section>

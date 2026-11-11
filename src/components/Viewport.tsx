@@ -325,6 +325,7 @@ export default function Viewport({
           className={mode === "select" ? "active" : ""}
           title="Selecionar e editar cotas"
           aria-label="Selecionar no desenho"
+          aria-pressed={mode === "select"}
           onClick={() => onMode("select")}
         >
           <MousePointer2 size={18} />
@@ -333,6 +334,7 @@ export default function Viewport({
           className={mode === "pan" ? "active" : ""}
           title="Pan · Espaço + arrastar"
           aria-label="Pan no desenho"
+          aria-pressed={mode === "pan"}
           onClick={() => onMode("pan")}
         >
           <Hand size={18} />
