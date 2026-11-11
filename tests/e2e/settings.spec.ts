@@ -95,6 +95,7 @@ test("aba única, grupos, relação com o painel e navegação completa por tecl
     "Limite da biela da peça selecionada",
     "Coeficientes dos materiais da peça selecionada",
     "Concreto excedente da peça selecionada",
+    "Armado como viga",
   ]) {
     await page.keyboard.press("Tab");
     await expect(
@@ -108,7 +109,7 @@ test("aba única, grupos, relação com o painel e navegação completa por tecl
   await page.keyboard.press("Shift+Tab");
   await expect(
     panel(page).getByRole("button", {
-      name: "Concreto excedente da peça selecionada",
+      name: "Armado como viga",
     }),
   ).toBeFocused();
 });

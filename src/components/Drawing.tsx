@@ -5,7 +5,12 @@ import {
   bottomReach,
   concreteProfile,
 } from "../domain/profile";
-import { useId } from "react";
+import { useId, useMemo } from "react";
+import {
+  beamArrangementActive,
+  beamBarPositions,
+  beamLayout,
+} from "../detailing/beam";
 import { number, type Piece, type GeometryKey } from "../domain/model";
 type Props = {
   piece: Piece;
@@ -116,6 +121,10 @@ export default function Drawing({
         )
       : []),
   ];
+  const beam = useMemo(
+    () => (beamArrangementActive(p) ? beamLayout(p) : null),
+    [p],
+  );
   const s = Math.min(480 / (g.columnWidth + g.length), 340 / (g.height + 80));
   const ox = (800 - (g.columnWidth + g.length) * s) / 2 + g.columnWidth * s,
     oy = 185;
@@ -132,6 +141,8 @@ export default function Drawing({
   const removedPath = cut
     ? `M${X(0)} ${Y(g.height)}L${X(g.length)} ${Y(g.tipHeight)}`
     : "";
+  const polyline = (pts: { x: number; y: number }[]) =>
+    pts.map((v, i) => `${i ? "L" : "M"}${X(v.x)} ${Y(v.y)}`).join("");
   const groupProps = (id: string) => ({
     className: `steel steel-${id} ${selectedBar === id ? "steel-selected" : ""}`,
     role: "button",
@@ -247,6 +258,26 @@ export default function Drawing({
                     }),
                   )}
                 </g>
+                {beam && (
+                  <g
+                    className="steel-positive"
+                    data-testid="beam-positive-section"
+                  >
+                    {beamBarPositions(
+                      p,
+                      beam.bottom.count,
+                      beam.bottom.diameter,
+                    ).map((v, i) => (
+                      <circle
+                        key={i}
+                        cx={400 + (v - g.width / 2) * s}
+                        cy={140 + beam.bottom.depthSupport * s}
+                        r={Math.max(3, (beam.bottom.diameter * s) / 2)}
+                        strokeWidth="1"
+                      />
+                    ))}
+                  </g>
+                )}
                 <g {...groupProps("N2")}>
                   {stitchLevels.map((y, t) => (
                     <g key={t}>
@@ -374,15 +405,31 @@ export default function Drawing({
                   strokeWidth="4"
                   strokeLinejoin="round"
                 >
-                  {layout.rows
-                    .filter((row) => row.count > 0)
-                    .map((row, i) => (
-                      <path
-                        key={i}
-                        d={`M${X(-Math.min(p.design.supportAnchorLength, g.columnWidth - g.cover))} ${Y(row.y)}H${X(g.length - g.cover)}`}
-                      />
-                    ))}
+                  {beam
+                    ? beam.top.map((bar, i) => (
+                        <path key={i} d={polyline(bar.vertices)} />
+                      ))
+                    : layout.rows
+                        .filter((row) => row.count > 0)
+                        .map((row, i) => (
+                          <path
+                            key={i}
+                            d={`M${X(-Math.min(p.design.supportAnchorLength, g.columnWidth - g.cover))} ${Y(row.y)}H${X(g.length - g.cover)}`}
+                          />
+                        ))}
                 </g>
+                {beam && (
+                  <path
+                    className="steel-positive"
+                    data-testid="beam-positive"
+                    d={polyline(beam.bottom.vertices)}
+                    fill="none"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                  >
+                    <title>Armadura positiva (armado como viga)</title>
+                  </path>
+                )}
               </>
             )}
             <rect

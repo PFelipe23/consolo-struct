@@ -9,6 +9,7 @@ import {
 } from "./geometry";
 import { type Bar, type Detail } from "./model";
 import { pinCenters } from "./model";
+import { beamBarPositions } from "./beam";
 import { reactionGeometry } from "../domain/theory";
 import { bottomDepth, concreteProfile } from "../domain/profile";
 import { coefficientText, materialSafety } from "../domain/materialSafety";
@@ -325,8 +326,12 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   const anglesText = (cut ? bottomAngles : [(Math.atan(slope) * 180) / Math.PI])
     .map((angle) => `${number(angle, 1)}°`)
     .join(" / ");
+  const beam = d.arrangement === "beam";
   for (const b of d.bars) {
-    if (b.family === "tie")
+    // Beam arrangement: bar paths are already in elevation coordinates (x, depth).
+    if (beam && (b.family === "tie" || b.family === "positive"))
+      barPath(b.path, x, y);
+    else if (b.family === "tie")
       for (const loc of b.locations) {
         const back =
           q.supportAnchor === "hook"
@@ -407,6 +412,7 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     (b) => b.family === "stitch" || b.family === "lower",
   );
   const verticalBars = d.bars.filter((b) => b.family === "stirrup");
+  const positiveBars = d.bars.filter((b) => b.family === "positive");
   const marks = (bs: Bar[]) =>
     bs.length
       ? bs.length === 1
@@ -424,9 +430,16 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   text(
     x - P,
     y + H + 29,
-    `Costura ${marks(stitchBars)} · Estribos ${marks(verticalBars)}`,
+    `Costura ${marks(stitchBars)} · Estribos ${marks(verticalBars)}${positiveBars.length ? ` · Positiva ${marks(positiveBars)}` : ""}`,
     2.2,
   );
+  if (beam)
+    text(
+      x - P,
+      y + H + 34,
+      "ARMADO COMO VIGA: tirante e positiva com dobras nas duas extremidades.",
+      2.2,
+    );
   // Section at the root, common to both concrete geometry and actual tie layer depths.
   const sectionBar = verticalBars[0];
   const cutDepth = sectionBar?.locations[0].x ?? 0;
@@ -441,8 +454,23 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
       sectionX + (g.cover + r.stirrupDiameter / 2) / 10,
       y + (g.cover + r.stirrupDiameter / 2) / 10,
     );
+  for (const b of positiveBars) {
+    // Depth of the sloped bottom chord at the section, inside the stirrup.
+    const depth =
+      g.height -
+      slope * cutDepth -
+      (g.cover + r.stirrupDiameter + b.diameter / 2) *
+        Math.sqrt(1 + slope ** 2);
+    for (const v of beamBarPositions(p, b.quantity, b.diameter))
+      entities.push({
+        type: "circle",
+        center: { x: sectionX + v / 10, y: y + depth / 10 },
+        radius: b.diameter / 20,
+        layer: "ARMADURAS",
+      });
+  }
   for (const b of tieBars) {
-    if (q.frontAnchor === "loop")
+    if (q.frontAnchor === "loop" && !beam)
       for (const loc of b.locations) {
         const inset = (B - b.width / 10) / 2;
         for (const yy of [inset, B - inset])
@@ -525,7 +553,7 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
   for (const b of tieBars)
     for (const loc of b.locations) {
       const planOffset =
-        q.frontAnchor === "loop"
+        q.frontAnchor === "loop" && !beam
           ? (B - b.width / 10) / 2
           : (g.cover +
               r.stirrupDiameter +
@@ -534,7 +562,17 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
                 (g.width - 2 * (g.cover + r.stirrupDiameter) - r.tieDiameter)) /
                 Math.max(b.quantity - 1, 1)) /
             10;
-      barPath(b.path, x, planY + planOffset);
+      if (beam) {
+        // In plan the vertical bends project onto the ends of the straight run.
+        const xs = samplePath(b.path).map((v) => v.x);
+        line(
+          x + Math.min(...xs) / 10,
+          planY + planOffset,
+          x + Math.max(...xs) / 10,
+          planY + planOffset,
+          "ARMADURAS",
+        );
+      } else barPath(b.path, x, planY + planOffset);
       if ((loc.layer ?? 0) > 0)
         leader(
           x + L * 0.7,
@@ -544,6 +582,18 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
           `${b.mark} - ${loc.layer! + 1}ª camada`,
         );
     }
+  for (const b of positiveBars) {
+    const xs = samplePath(b.path).map((v) => v.x);
+    for (const v of beamBarPositions(p, b.quantity, b.diameter))
+      line(
+        x + Math.min(...xs) / 10,
+        planY + v / 10,
+        x + Math.max(...xs) / 10,
+        planY + v / 10,
+        "ARMADURAS",
+        true,
+      );
+  }
   for (const b of verticalBars)
     for (const loc of b.locations)
       line(
@@ -894,7 +944,17 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
         6,
         cm(maxY - card.minY * 10),
       );
-    if (b.family === "tie") {
+    if (beam && (b.family === "tie" || b.family === "positive"))
+      text(
+        cardX,
+        cardY + card.h - 5,
+        `Trechos retos: ${b.path.segments
+          .filter((v) => v.type === "line")
+          .map((v) => cm(Math.hypot(v.b.x - v.a.x, v.b.y - v.a.y)))
+          .join(" / ")} cm; dobras nas duas extremidades.`,
+        2.05,
+      );
+    else if (b.family === "tie") {
       text(
         cardX,
         cardY + card.h - (b.hookTail ? 28 : 16),
@@ -969,6 +1029,11 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     "Mandris e ganchos: NBR 6118:2026, 9.4.2.3, tabelas 9.1 e 9.2 e 9.4.6.1. Estribos representados pela projeção nominal com fechamento de ganchos fora do plano.",
     "Comprimentos C somam trechos retos e arcos no eixo; não se obtêm por soma de cotas externas. O excedente de arredondamento fica na ponta reta. Densidade do aço: 7 850 kg/m³.",
     "Não cortar ou dobrar barras a partir da escala da tela. Conferir as cotas, o ajuste das armaduras no suporte e as tolerâncias do fabricante.",
+    ...(beam
+      ? [
+          "Armado como viga: dobras do tirante dimensionadas com lb e razão As,req/As,ef do cálculo, sem desconto por barra soldada, contadas da face do suporte e da borda interna da placa de apoio; dobras da positiva para lb,nec da própria bitola. Dobras dentro do contorno com o cobrimento informado.",
+        ]
+      : []),
     ...(safety.gammaC !== 1.4 || safety.gammaS !== 1.15
       ? [
           `Materiais: γc = ${coefficientText(safety.gammaC)}; γs = ${coefficientText(safety.gammaS)}. Referência para ${safety.reference.label}: γc = ${coefficientText(safety.reference.gammaC)}; γs = ${coefficientText(safety.reference.gammaS)}. Decisão do responsável técnico; o programa não certifica o enquadramento do elemento. NBR 9062:2017 §8.1; NBR 6118:2026.`,
