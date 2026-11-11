@@ -101,6 +101,22 @@ const supportRatios = {
   concreteSteel: 0.4,
   restrained: 0,
 } as const;
+/**
+ * α of lb,nec at the support (NBR 6118 §9.4.2.5): straight 1,0; hook with
+ * normal cover ≥ 3φ 0,7; welded transverse bar 0,7; both 0,5. The welded bar
+ * is a user declaration; its geometry is not verified.
+ */
+export function anchorageAlpha(
+  q: Pick<
+    Piece["design"],
+    "supportAnchor" | "hookNormalCover" | "supportWeldedBar"
+  >,
+  diameter: number,
+): number {
+  const hook = q.supportAnchor === "hook" && q.hookNormalCover >= 3 * diameter;
+  if (hook && q.supportWeldedBar) return 0.5;
+  return hook || q.supportWeldedBar ? 0.7 : 1;
+}
 export function materialProperties(
   fck: number,
   fyk: number,
@@ -596,12 +612,13 @@ function calculateCase(
     (r.tieDiameter < 32 ? 1 : (132 - r.tieDiameter) / 100) *
     m.fctd;
   const lb = Math.max((r.tieDiameter * m.fyd) / (4 * fbd), 25 * r.tieDiameter);
-  const anchorAlpha =
-    q.supportAnchor === "hook" && q.hookNormalCover >= 3 * r.tieDiameter
-      ? 0.7
-      : 1;
+  const anchorAlpha = anchorageAlpha(q, r.tieDiameter);
+  // The optional floor only replaces a ratio below 1; otherwise the original
+  // expression is kept unchanged (bit-identical results with the floor off).
+  const anchorFloored = q.anchorRatioFloor && tieRequired / asTie < 1;
+  const anchorRatio = anchorFloored ? 1 : tieRequired / asTie;
   const anchorRequired = Math.max(
-    (anchorAlpha * lb * tieRequired) / asTie,
+    anchorFloored ? anchorAlpha * lb : (anchorAlpha * lb * tieRequired) / asTie,
     0.3 * lb,
     10 * r.tieDiameter,
     100,
@@ -1181,10 +1198,20 @@ function calculateCase(
       anchorRequired,
       q.supportAnchorLength,
       "mm",
-      "lb=max(φfyd/(4fbd);25φ); lb,nec=max(αlb As,calc/As,ef;0,3lb;10φ;100)",
+      "lb=max(φfyd/(4fbd);25φ); lb,nec=max(α·lb·razão;0,3lb;10φ;100)",
       refs.anchor,
+      `α = ${number(anchorAlpha, 1)} (reta 1,0; gancho com cobrimento normal ≥ 3φ 0,7; barra transversal soldada 0,7; gancho e soldada 0,5); razão As,req/As,ef = ${Number.isFinite(anchorRatio) ? number(anchorRatio, 3) : "indeterminada"}${q.anchorRatioFloor ? " (limitada ao mínimo de 1,0, opção conservadora)" : " (sem piso)"}; lb = ${number(lb, 1)} mm.`,
     ),
   );
+  if (q.supportWeldedBar)
+    add(
+      note(
+        "anchorWeldedBar",
+        "Barra transversal soldada na ancoragem",
+        "Conferir diâmetro, posição e execução da barra transversal soldada conforme NBR 6118 §9.4.2.2; o programa não verifica a geometria.",
+        "NBR 6118 §9.4.2.2 e §9.4.2.5",
+      ),
+    );
   add(
     check(
       "anchorConfinement",
@@ -1420,6 +1447,9 @@ function calculateCase(
     anchorRequired,
     lb,
     anchorAlpha,
+    anchorRatio,
+    anchorRatioFloor: q.anchorRatioFloor ? 1 : 0,
+    anchorWeldedBar: q.supportWeldedBar ? 1 : 0,
     fbd,
     confinementRequired,
     a2,
@@ -1493,6 +1523,9 @@ function calculateCase(
       anchorRequired,
       lb,
       anchorAlpha,
+      anchorRatio,
+      anchorRatioFloor: q.anchorRatioFloor ? 1 : 0,
+      anchorWeldedBar: q.supportWeldedBar ? 1 : 0,
       fbd,
       confinementRequired,
       a2,
@@ -1742,6 +1775,7 @@ export function calculate(p: Piece): CalculationResult {
     "suspensionRequired",
     "splittingRequired",
     "anchorRequired",
+    "anchorRatio",
   ]) {
     const all = combinations.map((c) => c.values[key]);
     // Indeterminate in any combination ⇒ indeterminate envelope (key omitted).
