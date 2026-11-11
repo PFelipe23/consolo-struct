@@ -267,6 +267,7 @@ for (const layers of [1, 3]) {
     );
     await page.goto("/");
     const exportAudit = async () => {
+      await page.getByRole("tab", { name: "Início", exact: true }).click();
       await page.getByRole("button", { name: "Exportar", exact: true }).click();
       const event = page.waitForEvent("download");
       await page.getByRole("button", { name: /Cálculo auditável/ }).click();
