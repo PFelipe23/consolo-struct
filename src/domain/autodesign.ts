@@ -1,12 +1,43 @@
 import { area, type Piece } from "./model";
 import { calculate, tieLayout, type CalculationResult } from "./engine";
-import { reactionGeometry, upperStitchLayout } from "./theory";
+import { reactionGeometry, stirrupLayout, upperStitchLayout } from "./theory";
 export interface DesignProposal {
   piece: Piece;
   result: CalculationResult;
   changed: boolean;
   message: string;
   candidates: number;
+}
+const isBeam = (r: CalculationResult) =>
+  r.combinations.some((c) => c.method === "beam");
+/** Beam model (1 < a/d ≤ 2): N3 must meet Atransv,nec and smáx, and N2 the stitch area,
+ * before a tie candidate is judged. Stirrups never change VRd2, so a beamShear failure persists. */
+function beamSecondary(p: Piece, r: CalculationResult) {
+  const v = r.values;
+  if (
+    v.stirrupRequired !== undefined &&
+    v.beam_stirrupSpacingLimit !== undefined
+  ) {
+    const span = stirrupLayout(p).last - stirrupLayout(p).first;
+    p.rebar.stirrupCount = Math.min(
+      100,
+      Math.max(
+        1,
+        Math.ceil(v.stirrupRequired / area(2, p.rebar.stirrupDiameter)),
+        p.geometry.length <= v.beam_stirrupSpacingLimit
+          ? 1
+          : 1 + Math.ceil(span / v.beam_stirrupSpacingLimit),
+      ),
+    );
+  }
+  if (v.beam_stitchApplies && v.stitchRequired !== undefined)
+    p.rebar.stitchCount = Math.min(
+      100,
+      Math.max(
+        p.rebar.stitchCount,
+        Math.ceil(v.stitchRequired / area(2, p.rebar.stitchDiameter)),
+      ),
+    );
 }
 /** Finite enumeration; each candidate recomputes d and all simultaneous combinations.
  * Never invents support reinforcement, weld resistance, joint preparation or an input confirmation. */
@@ -36,6 +67,11 @@ export function suggestReinforcement(input: Piece): DesignProposal {
     "literatureTip",
     "literatureConcrete",
     "literatureStrut",
+    "beamDomain",
+    "beamShear",
+    "beamStirrups",
+    "beamStirrupSpacing",
+    "beamStitch",
   ]);
   for (const diameter of [6.3, 8, 10, 12.5, 16, 20, 25]) {
     for (
@@ -55,7 +91,11 @@ export function suggestReinforcement(input: Piece): DesignProposal {
         )
           continue;
         candidates++;
-        const r = calculate(p);
+        let r = calculate(p);
+        if (isBeam(r)) {
+          beamSecondary(p, r);
+          r = calculate(p);
+        }
         if (
           !r.combinations.length ||
           r.checks.some((c) => critical.has(c.id) && c.status === "fail")
@@ -81,24 +121,30 @@ export function suggestReinforcement(input: Piece): DesignProposal {
     };
   const result = calculate(best),
     v = result.values;
-  best.rebar.stitchCount = Math.max(
-    1,
-    Math.ceil(v.stitchRequired / area(2, best.rebar.stitchDiameter)),
-    Math.ceil((2 * v.d) / 3 / Math.min(100, best.geometry.loadOffset)),
-  );
-  const actualStitch = upperStitchLayout(best, tieLayout(best));
-  best.rebar.stitchCount = Math.max(
-    best.rebar.stitchCount,
-    1 +
-      Math.ceil(
-        (actualStitch.end - actualStitch.start) /
-          Math.min(100, reactionGeometry(best).a),
-      ),
-  );
-  best.rebar.stirrupCount = Math.max(
-    1,
-    Math.ceil(v.stirrupRequired / area(2, best.rebar.stirrupDiameter)),
-  );
+  const beam = isBeam(result);
+  // A beam with h > 600 mm has skin reinforcement (review), not stitch: N2 stays as informed.
+  if (!beam || v.beam_stitchApplies) {
+    best.rebar.stitchCount = Math.max(
+      1,
+      Math.ceil(v.stitchRequired / area(2, best.rebar.stitchDiameter)),
+      Math.ceil((2 * v.d) / 3 / Math.min(100, best.geometry.loadOffset)),
+    );
+    const actualStitch = upperStitchLayout(best, tieLayout(best));
+    best.rebar.stitchCount = Math.max(
+      best.rebar.stitchCount,
+      1 +
+        Math.ceil(
+          (actualStitch.end - actualStitch.start) /
+            Math.min(100, reactionGeometry(best).a),
+        ),
+    );
+  }
+  if (beam) beamSecondary(best, result);
+  else
+    best.rebar.stirrupCount = Math.max(
+      1,
+      Math.ceil(v.stirrupRequired / area(2, best.rebar.stirrupDiameter)),
+    );
   best.design.lowerStitchCount =
     v.lowerRequired > 0
       ? Math.max(
