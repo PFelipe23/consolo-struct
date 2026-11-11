@@ -49,14 +49,30 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
       const legacy = JSON.parse(JSON.stringify(p));
       delete legacy.design.gammaC;
       delete legacy.design.gammaS;
+      // Issue #12: options off by default; only metadata and the anchorage
+      // text (formula, α/ratio/lb detail) are new, the numbers are unchanged.
+      delete legacy.design.supportWeldedBar;
+      delete legacy.design.anchorRatioFloor;
       const metadata = new Set([
         "gammaC",
         "gammaS",
         "gammaCReference",
         "gammaSReference",
+        "anchorRatio",
+        "anchorRatioFloor",
+        "anchorWeldedBar",
       ]);
       const raw = JSON.stringify(calculate(legacy), (key, value) =>
-        metadata.has(key) ? undefined : value,
+        metadata.has(key)
+          ? undefined
+          : value?.id === "anchorage"
+            ? {
+                ...value,
+                formula:
+                  "lb=max(φfyd/(4fbd);25φ); lb,nec=max(αlb As,calc/As,ef;0,3lb;10φ;100)",
+                detail: value.detail.replace(/α = .*lb = [\d.,]+ mm\./, ""),
+              }
+            : value,
       );
       expect(createHash("sha256").update(raw).digest("hex")).toBe(expected);
     },

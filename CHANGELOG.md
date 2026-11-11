@@ -4,6 +4,12 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Ancoragem do tirante no suporte (issue #12): o coeficiente α cobre os quatro casos da NBR 6118 §9.4.2.5. Reta vale 1,0; gancho com cobrimento normal ≥ 3φ vale 0,7; barra transversal soldada vale 0,7; gancho + soldada vale 0,5. Nova caixa **Barra transversal soldada na ancoragem** (`supportWeldedBar`) em Cálculo > Ancoragem no suporte e no Detalhamento. Quando marcada, gera uma pendência "conferir" sobre a geometria da barra, que o programa não verifica.
+- Nova opção conservadora **Limitar a razão As,req/As,ef ao mínimo de 1,0** (`anchorRatioFloor`) em Cálculo > Ancoragem no suporte.
+- A verificação `anchorage` mantém id e comparação; a fórmula passa a `lb,nec = max(α·lb·razão; 0,3lb; 10φ; 100)`. A memória, o PDF e o cálculo auditável mostram α, a razão usada e `lb`, e expõem os valores `anchorRatio`, `anchorRatioFloor` e `anchorWeldedBar`.
+- Os quatro valores de α foram conferidos com a NBR 6118:2014 §9.4.2.5. O texto da edição citada pelo motor não foi conferido nesta contribuição.
+- As duas opções vêm desligadas por padrão. Arquivos antigos abrem sem os campos, com resultados idênticos e sem mudança do esquema 4.
+
 - Torna γc e γs editáveis por peça em Cálculo e em Configurações > Dimensionamento > Coeficientes dos materiais da peça selecionada. Padrões 1,40/1,15 em arquivos antigos, sem mudança de esquema; histórico e salvamento preservam as escolhas. A troca de produção não muda os valores automaticamente.
 - Usa os coeficientes adotados em fcd, fyd, fctd, fywd e armadura mínima de flexão, preservando os tetos de 435 MPa. Registra adotados e referências na memória, PDF, cálculo auditável e notas de detalhamento com valores alterados.
 - Acrescenta pendência `review` para cada coeficiente abaixo do par informado na issue #2: pré-moldado/moldado no local 1,40/1,15; pré-fabricado 1,30/1,10. A redução é tratada como permissão da NBR 9062:2017 §8.1, sujeita à decisão do responsável técnico; o produto não certifica o enquadramento do elemento. Referências normativas não conferidas nesta contribuição. γf, γn, combinações e classes de aço permanecem iguais.

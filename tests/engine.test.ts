@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
+  anchorageAlpha,
   calculate,
   cantileverBeamModel,
   materialProperties,
@@ -709,5 +711,179 @@ describe("Sugestão da viga em balanço com combinações", () => {
         "beamStirrupSpacing",
       ])
         expect(c.checks.find((check) => check.id === id)!.status).toBe("pass");
+  });
+});
+describe("Ancoragem no suporte: α e piso da razão (issue #12)", () => {
+  // Reference: fck 30, CA-50, φ20, má aderência, As,ef = 4 Ø20.
+  const anchorFixture = () => {
+    const p = shortFixture();
+    p.materials = { fck: 30, fyk: 500 };
+    p.rebar.tieCount = 4;
+    p.rebar.tieDiameter = 20;
+    p.design.bond = "poor";
+    p.design.gammaC = 1.4;
+    p.design.gammaS = 1.15;
+    return p;
+  };
+  /** Bisect the design vertical load until As,req/As,ef equals the target. */
+  const withRatio = (target: number) => {
+    const p = anchorFixture();
+    const ratio = (v: number) => {
+      p.loads.vertical = v;
+      const r = calculate(p).values;
+      return r.tieRequired / r.tieProvided;
+    };
+    // Above the minimum-steel plateau and inside the contact model's domain.
+    let lo = 200000,
+      hi = 2e6;
+    expect(ratio(lo)).toBeLessThan(target);
+    expect(ratio(hi)).toBeGreaterThan(target);
+    for (let i = 0; i < 200 && hi - lo > 1e-9; i++) {
+      const mid = (lo + hi) / 2;
+      if (ratio(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    p.loads.vertical = (lo + hi) / 2;
+    return p;
+  };
+  const setAlpha = (p: ReturnType<typeof newPiece>, alpha: number) => {
+    p.design.supportAnchor = alpha === 1 ? "straight" : "hook";
+    p.design.hookNormalCover = 60;
+    p.design.supportWeldedBar = alpha === 0.5;
+  };
+  it.each([
+    ["reta", "straight", 0, false, 1],
+    ["gancho com cobrimento ≥ 3φ", "hook", 60, false, 0.7],
+    ["gancho com cobrimento < 3φ", "hook", 59, false, 1],
+    ["soldada sem gancho", "straight", 0, true, 0.7],
+    ["gancho com cobrimento ≥ 3φ e soldada", "hook", 60, true, 0.5],
+    ["gancho com cobrimento < 3φ e soldada", "hook", 59, true, 0.7],
+  ] as const)("CA1/CA2: α para %s", (_, anchor, cover, welded, alpha) => {
+    const q = {
+      supportAnchor: anchor,
+      hookNormalCover: cover,
+      supportWeldedBar: welded,
+    };
+    expect(anchorageAlpha(q, 20)).toBe(alpha);
+    const p = anchorFixture();
+    p.design = { ...p.design, ...q };
+    expect(calculate(p).values.anchorAlpha).toBe(alpha);
+  });
+  it("lb de referência reproduz fctd, fbd e lb da issue", () => {
+    const v = calculate(anchorFixture()).values;
+    expect(v.fbd).toBeCloseTo(2.28097, 5);
+    expect(v.lb).toBeCloseTo(953.066, 3);
+    expect(v.tieProvided).toBeCloseTo(1256.64, 2);
+  });
+  it.each([
+    [0.8, 1, 762.45, 953.07],
+    [0.8, 0.7, 533.72, 667.15],
+    [0.8, 0.5, 381.23, 476.53],
+    [1.2, 1, 1143.68, 1143.68],
+    [1.2, 0.7, 800.58, 800.58],
+    [1.2, 0.5, 571.84, 571.84],
+  ])(
+    "CA3: razão %s e α %s reproduzem lb,nec da tabela de referência",
+    (ratio, alpha, off, on) => {
+      const p = withRatio(ratio);
+      setAlpha(p, alpha);
+      const a = calculate(p).values;
+      expect(a.tieRequired / a.tieProvided).toBeCloseTo(ratio, 9);
+      expect(a.anchorAlpha).toBe(alpha);
+      expect(a.anchorRatio).toBeCloseTo(ratio, 9);
+      expect(a.anchorRatioFloor).toBe(0);
+      expect(Math.abs(a.anchorRequired - off)).toBeLessThanOrEqual(0.01);
+      p.design.anchorRatioFloor = true;
+      const b = calculate(p).values;
+      expect(b.anchorRatio).toBeCloseTo(Math.max(1, ratio), 9);
+      expect(b.anchorRatioFloor).toBe(1);
+      expect(Math.abs(b.anchorRequired - on)).toBeLessThanOrEqual(0.01);
+    },
+  );
+  it("CA4: opções desligadas mantêm a expressão original, bit a bit", () => {
+    for (const p of [shortFixture(), newPiece(1), cantileverFixture()]) {
+      const r = calculate(p);
+      for (const cs of r.combinations) {
+        const v = cs.values;
+        if (v.tieRequired === undefined) continue;
+        expect(v.anchorRequired).toBe(
+          Math.max(
+            (v.anchorAlpha * v.lb * v.tieRequired) / v.tieProvided,
+            0.3 * v.lb,
+            10 * p.rebar.tieDiameter,
+            100,
+          ),
+        );
+      }
+      expect(r.checks.some((ch) => ch.id === "anchorWeldedBar")).toBe(false);
+    }
+  });
+  it("CA5: projeto salvo sem os campos abre com ambos falsos e mesmos números", () => {
+    const file = readFileSync(
+      new URL("../examples/casos-validacao.lume.json", import.meta.url),
+      "utf8",
+    );
+    expect(file).not.toContain("supportWeldedBar");
+    expect(file).not.toContain("anchorRatioFloor");
+    const restored = decodeProject(file);
+    expect(restored.schemaVersion).toBe(4);
+    const explicit = decodeProject(file);
+    for (const piece of explicit.pieces) {
+      piece.design.supportWeldedBar = false;
+      piece.design.anchorRatioFloor = false;
+    }
+    restored.pieces.forEach((piece, i) => {
+      expect(piece.design.supportWeldedBar).toBe(false);
+      expect(piece.design.anchorRatioFloor).toBe(false);
+      expect(calculate(piece)).toEqual(calculate(explicit.pieces[i]));
+    });
+    // The file reproduces the regression fixture, so its results match it too.
+    const short = calculate(shortFixture()).values;
+    const loaded = calculate(restored.pieces[0]).values;
+    expect(loaded.anchorRequired).toBe(short.anchorRequired);
+    expect(loaded.anchorAlpha).toBe(1);
+  });
+  it("CA6: barra soldada gera nota 'conferir', nunca aprovação", () => {
+    const p = shortFixture();
+    expect(c(p, "anchorWeldedBar")).toBeUndefined();
+    p.design.supportWeldedBar = true;
+    const note = c(p, "anchorWeldedBar");
+    expect(note.status).toBe("review");
+    expect(note.detail).toContain("o programa não verifica a geometria");
+    expect(note.reference).toContain("§9.4.2.2");
+  });
+  it("CA7: verificação de ancoragem mostra α, razão e piso", () => {
+    const p = shortFixture();
+    let a = c(p, "anchorage");
+    expect(a.formula).toBe(
+      "lb=max(φfyd/(4fbd);25φ); lb,nec=max(α·lb·razão;0,3lb;10φ;100)",
+    );
+    expect(a.detail).toContain("α = 1,0");
+    expect(a.detail).toContain("(sem piso)");
+    p.design.anchorRatioFloor = true;
+    p.design.supportWeldedBar = true;
+    a = c(p, "anchorage");
+    expect(a.detail).toContain("α = 0,7");
+    expect(a.detail).toContain("limitada ao mínimo de 1,0");
+  });
+  it("as novas opções alteram a assinatura do cálculo", () => {
+    const p = shortFixture(),
+      before = fingerprint(p);
+    p.design.supportWeldedBar = true;
+    const welded = fingerprint(p);
+    expect(welded).not.toBe(before);
+    p.design.anchorRatioFloor = true;
+    expect(fingerprint(p)).not.toBe(welded);
+  });
+  it("no ramo de viga com domínio inválido a razão fica indeterminada", () => {
+    const p = cantileverFixture({ vertical: 2_000_000 });
+    p.design.anchorRatioFloor = true;
+    const r = calculate(p);
+    for (const cs of r.combinations)
+      if (cs.values.tieRequired === undefined) {
+        expect(cs.values.anchorRatio).toBeUndefined();
+        const a = cs.checks.find((x) => x.id === "anchorage")!;
+        expect(a.detail).toContain("indeterminada");
+      }
   });
 });

@@ -281,8 +281,22 @@ Para ação direta, N3 ≥ 0,0015bh. Para ação indireta, N5 ≥ Vd/fywd e não
 
 - Ancoragem do tirante no suporte: fbd = η1 η2 η3 fctd, conforme §§8.3 e 9.3.2. Má aderência usa η2=0,7; boa aderência precisa ser justificada.
 - `lb = max(φ fyd/(4fbd); 25φ)`.
-- `lb,nec = max(α lb As,req/As,ef; 0,3lb; 10φ; 100 mm)`.
-- α=0,7 para gancho somente com cobrimento normal ≥3φ; fora disso α=1. O percurso real do gancho permanece pendente, pois a geometria integral do suporte não é definida.
+- `lb,nec = max(α · lb · razão; 0,3lb; 10φ; 100 mm)`, com `razão = As,req/As,ef`. A opção conservadora **Limitar a razão As,req/As,ef ao mínimo de 1,0** (`anchorRatioFloor`, desligada por padrão) usa `razão = max(1,0; As,req/As,ef)`. A norma não exige esse piso; com a opção desligada o resultado é o anterior. Os pisos `0,3lb`, `10φ` e `100 mm` não mudam.
+- Coeficiente α (NBR 6118 §9.4.2.5). "Gancho" significa gancho com cobrimento normal ao plano do gancho ≥ 3φ:
+
+  | Ancoragem no suporte                                         | α   |
+  | ------------------------------------------------------------ | --- |
+  | Reta, sem barra transversal soldada                          | 1,0 |
+  | Gancho com cobrimento normal ≥ 3φ                            | 0,7 |
+  | Gancho com cobrimento normal < 3φ, sem barra soldada         | 1,0 |
+  | Barra transversal soldada, sem gancho ou com cobrimento < 3φ | 0,7 |
+  | Gancho com cobrimento normal ≥ 3φ **e** barra soldada        | 0,5 |
+
+  O valor 0,5 vale somente para gancho + barra soldada; barra soldada sozinha é 0,7.
+
+- A barra transversal soldada (`supportWeldedBar`, desligada por padrão) é uma declaração do usuário (§9.4.2.2). O programa não verifica diâmetro, posição nem execução dessa barra e, quando ela é declarada, gera a pendência **Barra transversal soldada na ancoragem** com estado "conferir". Ela não se confunde com a barra transversal soldada da extremidade frontal (`frontAnchor`).
+- A verificação de ancoragem, a memória, o PDF e o cálculo auditável registram α, a razão usada (com ou sem o piso 1,0) e `lb`. Projetos sem os dois campos abrem com ambos desligados, sem mudança de `schemaVersion` (4).
+- O percurso real do gancho permanece pendente, pois a geometria integral do suporte não é definida.
 - Armadura de confinamento na ancoragem, para as bitolas admitidas no consolo: capacidade ≥25% da força de uma barra (§9.4.2.6.1).
 - Armadura local na face do suporte ≥área efetiva do tirante (§7.3.3.14). Não é dimensionamento do pilar.
 - CA-25 tracionado não aceita ancoragem exclusivamente reta.
