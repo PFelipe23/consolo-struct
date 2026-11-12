@@ -127,6 +127,35 @@ export default function Drawing({
   );
   const s = Math.min(480 / (g.columnWidth + g.length), 340 / (g.height + 80));
   const sectionLeft = 400 - (g.width * s) / 2;
+  const stitchRadius = (p.rebar.stitchDiameter * s) / 2;
+  const stitchInset = (depth: number) => {
+    // Erode N3's rounded centerline by the complete N2 symbol and both
+    // half-strokes. This graphical clearance does not change bar levels
+    // or define an additional physical reinforcement spacing rule.
+    const corner = Math.min(
+      8,
+      ((g.width - 2 * g.cover) * s) / 2,
+      ((g.height - 2 * g.cover) * s) / 2,
+    );
+    const clearance = stitchRadius + s / 2 + 2.5 / 2;
+    const edgeDistance =
+      Math.min(depth - g.cover, g.height - g.cover - depth) * s;
+    const innerCorner = Math.max(0, corner - clearance);
+    const cornerInset =
+      corner -
+      Math.sqrt(
+        Math.max(0, innerCorner ** 2 - Math.max(0, corner - edgeDistance) ** 2),
+      );
+    return (
+      g.cover * s +
+      Math.max(
+        (p.rebar.stirrupDiameter + p.rebar.stitchDiameter / 2) * s,
+        clearance,
+        cornerInset,
+      ) +
+      s / 2
+    );
+  };
   const sectionCentroid = 140 + layout.dPrime * s;
   const dPrimeLabel = `d’ = ${number(layout.dPrime / 10, 1)} cm`;
   const ox = (800 - (g.columnWidth + g.length) * s) / 2 + g.columnWidth * s,
@@ -281,18 +310,18 @@ export default function Drawing({
                     ))}
                   </g>
                 )}
-                <g {...groupProps("N2")}>
+                <g {...groupProps("N2")} strokeWidth={s}>
                   {stitchLevels.map((y, t) => (
                     <g key={t}>
                       <circle
-                        cx={400 - (g.width * s) / 2 + g.cover * s}
+                        cx={sectionLeft + stitchInset(y)}
                         cy={140 + y * s}
-                        r="3"
+                        r={stitchRadius}
                       />
                       <circle
-                        cx={400 + (g.width * s) / 2 - g.cover * s}
+                        cx={sectionLeft + g.width * s - stitchInset(y)}
                         cy={140 + y * s}
-                        r="3"
+                        r={stitchRadius}
                       />
                     </g>
                   ))}
