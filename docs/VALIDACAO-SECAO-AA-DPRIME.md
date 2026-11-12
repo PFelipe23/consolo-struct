@@ -59,3 +59,13 @@ Depois, três camadas com 3 + 2 + 2 barras, tema escuro. O extremo inferior term
 O resultado da CI deve ser conferido no PR. Até sua conclusão, a interação de mouse/teclado, a geometria no DOM real e os critérios CA1–CA5 de ponta a ponta permanecem aguardando essa execução. Não houve teste nativo Tauri; não há alteração nativa nesta entrega.
 
 Motor, fórmulas, quantitativos, arquivos, exportações, elevação, 3D e desenhos de fabricação não foram alterados. Testes aprovados não representam certificação normativa ou liberação para execução.
+
+## Complemento de revisão: enquadramento de seções largas
+
+A revisão da integração #37 reproduziu um corte da nova cota com a peça inicial e largura de 1000 mm: o texto terminava em x = −8,17, fora do viewBox 0–800, embora a seção de concreto ainda coubesse. A geometria passa pelo schema e por `geometryErrors`. O comando de enquadramento só restaura a câmera e não corrigia o corte.
+
+O limite de escala agora considera também a largura, somente no ramo de seção. Reserva margem para d’ e mantém a escala anterior quando a largura já cabe. A elevação, o centroide, entradas, motor e arquivos não mudam. É uma correção de apresentação; não altera a posição física nem os critérios das armaduras.
+
+Regressões em `tests/sectionFraming.test.ts`: seis casos de largura 1000/2000/6000 mm com uma/três camadas falham no componente anterior e passam com a correção. Dois casos adicionais preservam a escala da seção inicial e o SVG da elevação quando só a largura muda.
+
+Os dois testes adicionais de editor verificam o retângulo real do texto dentro da área de desenho, mudanças de largura entre 300 e 6000 mm, uma/três camadas, temas claro/escuro e reenquadramento após zoom/pan. Anexam capturas reais para a CI. O navegador local deste ambiente não inicia por restrição de sockets; a validação interativa depende da execução da CI no SHA final. O teste nativo Tauri continua não executado.

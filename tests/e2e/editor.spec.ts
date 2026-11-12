@@ -394,3 +394,72 @@ for (const layers of [1, 3]) {
     }
   });
 }
+
+for (const layers of [1, 3]) {
+  test(`seção A–A: d’ cabe após enquadrar seções largas (${layers} camada(s))`, async ({
+    page,
+  }, testInfo) => {
+    const project = exampleProject();
+    const piece = project.pieces[0];
+    piece.geometry.width = 1000;
+    piece.design.tieLayers = layers;
+    piece.rebar.tieCount = layers === 1 ? 4 : 7;
+    await page.addInitScript(
+      (raw) => localStorage.setItem("consolostruct.project.v1", raw),
+      JSON.stringify(project),
+    );
+    await page.goto("/");
+    await page
+      .locator(".document-tabs")
+      .getByRole("button", { name: "Seção A–A", exact: true })
+      .click();
+    const canvas = page.locator(".canvas");
+    const dimension = page.getByRole("img", { name: /^d’ =/ });
+    const expectInside = async () => {
+      await expectSectionDPrime(page, piece);
+      const bounds = (await canvas.boundingBox())!;
+      const text = (await dimension.locator("text").boundingBox())!;
+      expect(text.x).toBeGreaterThan(bounds.x);
+      expect(text.y).toBeGreaterThan(bounds.y);
+      expect(text.x + text.width).toBeLessThan(bounds.x + bounds.width);
+      expect(text.y + text.height).toBeLessThan(bounds.y + bounds.height);
+    };
+    for (const theme of ["light", "dark"]) {
+      if (theme === "dark")
+        await page.getByRole("button", { name: "Alternar tema" }).click();
+      for (const width of [1000, 2000, 6000, 300, 1000]) {
+        await editSectionField(
+          page.getByRole("textbox", { name: /^Largura/ }),
+          String(width / 10),
+        );
+        piece.geometry.width = width;
+        await page
+          .getByRole("button", { name: "Ajustar desenho à tela" })
+          .click();
+        await expectInside();
+      }
+      await page
+        .getByRole("button", { name: "Diminuir zoom no desenho" })
+        .click();
+      const bounds = (await canvas.boundingBox())!;
+      await page.mouse.move(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+      );
+      await page.mouse.down({ button: "middle" });
+      await page.mouse.move(
+        bounds.x + bounds.width / 2 + 20,
+        bounds.y + bounds.height / 2 + 15,
+      );
+      await page.mouse.up({ button: "middle" });
+      await page
+        .getByRole("button", { name: "Ajustar desenho à tela" })
+        .click();
+      await expectInside();
+      await testInfo.attach(`secao-larga-dprime-${layers}-${theme}`, {
+        body: await canvas.screenshot(),
+        contentType: "image/png",
+      });
+    }
+  });
+}

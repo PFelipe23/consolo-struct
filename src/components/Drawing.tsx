@@ -125,7 +125,13 @@ export default function Drawing({
     () => (beamArrangementActive(p) ? beamLayout(p) : null),
     [p],
   );
-  const s = Math.min(480 / (g.columnWidth + g.length), 340 / (g.height + 80));
+  const s = Math.min(
+    480 / (g.columnWidth + g.length),
+    340 / (g.height + 80),
+    // Keep the section and its external dimensions inside the drawing.
+    // Elevation keeps its existing scale; narrow sections are unchanged.
+    section ? 480 / g.width : Infinity,
+  );
   const sectionLeft = 400 - (g.width * s) / 2;
   const sectionCentroid = 140 + layout.dPrime * s;
   const dPrimeLabel = `d’ = ${number(layout.dPrime / 10, 1)} cm`;
