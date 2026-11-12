@@ -32,6 +32,30 @@ describe("Geometria em unidades canônicas", () => {
   });
 });
 describe("Arquivos e invalidação dos resultados", () => {
+  it("abre projeto antigo com floor12 e justificativa vazia, mantendo esquema 4", () => {
+    const original = exampleProject(),
+      legacy = JSON.parse(JSON.stringify(original));
+    for (const p of legacy.pieces) {
+      delete p.design.gammaNPolicy;
+      delete p.design.gammaNJustification;
+    }
+    const opened = decodeProject(JSON.stringify(legacy));
+    expect(opened.schemaVersion).toBe(4);
+    expect(opened).toEqual(original);
+    for (const p of opened.pieces) {
+      expect(p.design.gammaNPolicy).toBe("floor12");
+      expect(p.design.gammaNJustification).toBe("");
+    }
+  });
+  it("preserva tabela e justificativa por peça no round-trip do arquivo", () => {
+    const p = exampleProject();
+    Object.assign(p.pieces[0].design, {
+      gammaNPolicy: "table9062",
+      gammaNJustification:
+        "Condições de produção e carregamento conferidas pelo responsável.",
+    });
+    expect(decodeProject(JSON.stringify(p))).toEqual(p);
+  });
   it("abre aço legado personalizado, preserva o número e mantém unsupported", () => {
     const project = exampleProject();
     project.pieces[0].materials.fyk = 420;

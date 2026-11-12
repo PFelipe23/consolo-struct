@@ -8,6 +8,31 @@ import {
 import { area, number, type Piece, type Project } from "../domain/model";
 import { concreteProfile, pieceVolume } from "../domain/profile";
 import { steelBondDescription, steelLabel } from "../domain/steel";
+import {
+  gammaNDecision,
+  gammaNDecisionText,
+  gammaNPolicyLabels,
+  gammaNReference,
+} from "../domain/gammaN";
+
+// Geometry exports keep their original bytes under the default policy.
+const gammaNGeometryNote = (p: Piece) =>
+  p.design.gammaNPolicy === "table9062"
+    ? gammaNDecisionText(gammaNDecision(p.design))
+    : "";
+const gammaNNoteRows = (text: string, max = 100) => {
+  const rows: string[] = [];
+  let line = "";
+  for (const word of text.match(new RegExp(`\\S{1,${max}}`, "g")) ?? []) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > max) {
+      rows.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) rows.push(line);
+  return rows;
+};
 
 const anchorRatioLabel = (v: Record<string, number>) =>
   v.anchorRatioFloor
@@ -25,6 +50,14 @@ export function piecePoints(p: Piece): [number, number][] {
 }
 export function toSvg(p: Piece): string {
   const g = p.geometry;
+  const gammaNote = gammaNGeometryNote(p);
+  const gammaRows = gammaNNoteRows(
+    gammaNote,
+    Math.max(
+      10,
+      Math.min(100, Math.floor((g.columnWidth + g.length + 60) / 8)),
+    ),
+  );
   const xml = (s: string) =>
     s
       .replaceAll("&", "&amp;")
@@ -32,11 +65,12 @@ export function toSvg(p: Piece): string {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;");
   const width = g.columnWidth + g.length + 180,
-    height = g.height + 260;
+    height =
+      g.height + 260 + (gammaRows.length ? 40 + gammaRows.length * 16 : 0);
   const path = piecePoints(p)
     .map(([x, y]) => `${x},${-y}`)
     .join(" ");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}"><rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.7 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}">${gammaNote ? `<desc>${xml(gammaNote)}</desc>` : ""}<rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.7 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text>${gammaRows.map((row, index) => `<text x="${-g.columnWidth}" y="${g.height + 110 + index * 16}">${xml(row)}</text>`).join("")}</g></svg>`;
 }
 export function toDxf(p: Piece): string {
   const g = p.geometry;
@@ -104,6 +138,30 @@ export function toDxf(p: Piece): string {
     1,
     "ConsoloStruct 0.7 - GEOMETRIA NAO EXECUTIVA - NAO EXECUTIVO",
   );
+  gammaNNoteRows(gammaNGeometryNote(p)).forEach((row, index) =>
+    lines.push(
+      0,
+      "TEXT",
+      100,
+      "AcDbEntity",
+      8,
+      "AVISO",
+      100,
+      "AcDbText",
+      10,
+      -g.columnWidth,
+      20,
+      -g.height - 40 - index * 18,
+      40,
+      8,
+      1,
+      row.replace(
+        /[^\x20-\x7e]/g,
+        (c) =>
+          `\\U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+      ),
+    ),
+  );
   lines.push(0, "ENDSEC", 0, "EOF");
   return lines.join("\n") + "\n";
 }
@@ -112,6 +170,9 @@ const csvCell = (v: unknown) =>
     .replace(/^[=+@\-\t\r]/, "'$&")
     .replaceAll('"', '""')}"`;
 export function toCsv(project: Project) {
+  const withGammaN = project.pieces.some(
+    (p) => p.design.gammaNPolicy === "table9062",
+  );
   const rows: unknown[][] = [
     [
       "ConsoloStruct 0.7 - Quantidades e verificacoes ELU; consultar memoria e pendencias",
@@ -137,6 +198,14 @@ export function toCsv(project: Project) {
       "Combinacao do tirante",
     ],
   ];
+  if (withGammaN)
+    rows[1].push(
+      "Politica gamma n",
+      "gamma n 9062",
+      "gamma n adotado",
+      "Piso de referencia gamma n",
+      "Justificativa informada gamma n",
+    );
   for (const p of project.pieces) {
     const r = calculate(p);
     rows.push([
@@ -164,6 +233,15 @@ export function toCsv(project: Project) {
         ? ""
         : number(r.values.anchorRequired / 10, 3),
       r.governingCase,
+      ...(withGammaN
+        ? [
+            gammaNPolicyLabels[gammaNDecision(p.design).policy],
+            r.values.gammaN9062 ?? "",
+            r.values.gammaN ?? "",
+            1.2,
+            p.design.gammaNJustification ?? "",
+          ]
+        : []),
     ]);
   }
   return "\uFEFF" + rows.map((r) => r.map(csvCell).join(";")).join("\r\n");
@@ -291,6 +369,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   result.reasons.forEach((r) => line(r, 10, true));
   title("1. Hipoteses e alcance");
   result.assumptions.forEach((a, i) => line(`${i + 1}. ${a}`));
+  line(gammaNDecisionText(result.gammaNDecision ?? gammaNDecision(p.design)));
+  line(gammaNReference);
   title("2. Identificacao das entradas");
   line(
     `b=${p.geometry.width} mm; h=${p.geometry.height} mm; h2=${p.geometry.tipHeight} mm; L=${p.geometry.length} mm; a=${p.geometry.loadOffset} mm; cnom=${p.geometry.cover} mm; P=${p.geometry.columnWidth} mm.`,

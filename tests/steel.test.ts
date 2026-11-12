@@ -118,6 +118,8 @@ describe("Regressão capturada no upstream e903617, antes da integração de cla
       // Mesmo projeto capturado antes do recorte; preserve o hash integral,
       // sem normalizar resultados nem o fingerprint. Campo ausente usa keep.
       delete (p.design as Partial<typeof p.design>).excessConcrete;
+      delete (p.design as Partial<typeof p.design>).gammaNPolicy;
+      delete (p.design as Partial<typeof p.design>).gammaNJustification;
       const result = calculate(p);
       expect(result.values.fbd).toBe(fbd);
       expect(result.values.lb).toBe(lb);
