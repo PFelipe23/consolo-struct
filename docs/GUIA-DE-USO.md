@@ -25,7 +25,7 @@ O tema fica em **Configurações > Geral / Aparência**, além do acesso rápido
 
 Use **Novo projeto** e confirme nome, cliente e responsável em Dados do projeto. Cancelar mantém o projeto anterior. Use **Abrir** para carregar um projeto; o exemplo `examples/casos-validacao.lume.json` permite explorar o motor, e `examples/detalhamento/consolos-detalhados.lume.json` demonstra tirantes simples e duplos.
 
-Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 4. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
+Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 5. Esquemas 1–4 migram com N3 de dois ramos e N4 Ø8 mm; o antigo porta-estribos opcional é substituído pela N4 obrigatória. A migração não restaura resultados como atuais. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
 
 ## 2. Conferir entradas
 
@@ -35,7 +35,11 @@ Selecione o consolo e revise geometria, materiais, cargas, armaduras e a aba **C
 - Use ponto ou vírgula decimal, sem separador de milhar.
 - No modo H estimado, H digitado é **adicional** ao coeficiente do apoio. No modo análise, é a resultante total e exige justificativa.
 - Ações já de cálculo devem incluir γf e γn; não há segunda majoração.
-- N1 conta ramos longitudinais. N2/N3/N4/N5 contam estribos fechados com dois ramos efetivos.
+- N1 conta ramos longitudinais; N2 mantém dois ramos efetivos por estribo.
+- Em **Armaduras > N3**, escolha **2 ou 4 ramos efetivos por posição**. Quatro ramos usam estribo externo mais grampo interno. Quantidade continua sendo o número de posições ao longo do consolo.
+- **N4 · Armadura construtiva** é obrigatória. Edite somente sua bitola (padrão Ø8); a quantidade de 2 ou 4 barras deriva de N3. Aparece na elevação, seção, 3D e detalhamento, sem contribuição resistente ou participação na sugestão automática.
+- Em Cálculo > Armaduras complementares, **N5 é fendilhamento e N6 é suspensão**, com dois ramos efetivos, mantendo os campos e valores semânticos anteriores. Não se contam novamente em N2/N3.
+- Mudanças de ramos/bitola participam de Desfazer/Refazer, são independentes por peça e invalidam a memória anterior. Ao detalhar, confira as pendências de N4, inclusive interferências com N1 ou com a positiva P1 do modo viga.
 - Alterar bitolas, camadas, estribos ou cobrimento pode modificar a altura útil e o modelo resistente.
 - As combinações são fornecidas pelo projetista; não há geração automática segundo NBR 8681.
 

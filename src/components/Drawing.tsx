@@ -1,10 +1,13 @@
+import {
+  constructiveGeometry,
+  transverseGeometry,
+  translatePath,
+  sectionDepths,
+} from "../detailing/transverse";
+import { samplePath } from "../detailing/geometry";
 import { tieLayout } from "../domain/engine";
 import { reactionGeometry, upperStitchLayout } from "../domain/theory";
-import {
-  bottomOffsetDepth,
-  bottomReach,
-  concreteProfile,
-} from "../domain/profile";
+import { bottomReach, concreteProfile } from "../domain/profile";
 import { useId, useMemo } from "react";
 import {
   beamArrangementActive,
@@ -107,6 +110,9 @@ export default function Drawing({
 }: Props) {
   const uid = useId().replaceAll(":", "");
   const g = p.geometry;
+  const transverse = useMemo(() => transverseGeometry(p), [p]);
+  const rootSection = useMemo(() => transverseGeometry(p, 0), [p]);
+  const constructive = useMemo(() => constructiveGeometry(p), [p]);
   const reaction = reactionGeometry(p);
   const layout = tieLayout(p);
   const stitchLevels = [
@@ -221,16 +227,44 @@ export default function Drawing({
             />
             {rebar && (
               <>
-                <rect
+                <g
                   {...groupProps("N3")}
-                  x={400 - (g.width * s) / 2 + g.cover * s}
-                  y={140 + g.cover * s}
-                  width={(g.width - 2 * g.cover) * s}
-                  height={(g.height - 2 * g.cover) * s}
-                  rx="8"
                   fill="none"
-                  strokeWidth="2.5"
-                />
+                  strokeWidth={p.rebar.stirrupDiameter * s}
+                >
+                  {rootSection.sections.map((section, i) => (
+                    <path
+                      key={i}
+                      data-n3-part={section.internal ? "grampo" : "externo"}
+                      d={samplePath(
+                        translatePath(
+                          section.path,
+                          section.offset,
+                          rootSection.stirrupOffset,
+                        ),
+                        24,
+                      )
+                        .map(
+                          (pt, j) =>
+                            `${j ? "L" : "M"}${400 + (pt.x - g.width / 2) * s} ${140 + pt.y * s}`,
+                        )
+                        .join("")}
+                    />
+                  ))}
+                </g>
+                <g {...groupProps("N4")}>
+                  {constructive.positions.flatMap((v, i) =>
+                    sectionDepths(constructive.path, 0).map((depth, j) => (
+                      <circle
+                        key={`${i}-${j}`}
+                        cx={400 + (v - g.width / 2) * s}
+                        cy={140 + depth * s}
+                        r={(constructive.diameter * s) / 2}
+                        strokeWidth="0.5"
+                      />
+                    )),
+                  )}
+                </g>
                 <g {...groupProps("N1")}>
                   {layout.rows.flatMap((row, j) =>
                     Array.from({ length: row.count }, (_, i) => {
@@ -380,24 +414,26 @@ export default function Drawing({
                   })}
                 </g>
                 <g {...groupProps("N3")} fill="none" strokeWidth="2">
-                  {Array.from({ length: p.rebar.stirrupCount }, (_, i) => {
-                    const x =
-                      g.cover +
-                      ((g.length - 2 * g.cover) * i) /
-                        Math.max(1, p.rebar.stirrupCount - 1);
-                    const bottom = cut
-                      ? bottomOffsetDepth(
-                          concrete,
-                          x,
-                          g.cover + p.rebar.stirrupDiameter / 2,
-                        )
-                      : g.height -
-                        ((g.height - g.tipHeight) * x) / g.length -
-                        g.cover;
-                    return (
-                      <path key={i} d={`M${X(x)} ${Y(g.cover)}V${Y(bottom)}`} />
-                    );
-                  })}
+                  {transverse.sections.map((section, i) => (
+                    <path
+                      key={i}
+                      data-n3-part={section.internal ? "grampo" : "externo"}
+                      d={`M${X(section.x)} ${Y(transverse.stirrupOffset)}V${Y(transverse.stirrupOffset + section.height)}`}
+                    />
+                  ))}
+                </g>
+                <g {...groupProps("N4")} fill="none" strokeWidth="2.5">
+                  {constructive.positions.map((v, i) => (
+                    <path
+                      key={i}
+                      data-transverse-position={v}
+                      d={polyline(samplePath(constructive.path, 24))}
+                    >
+                      <title>
+                        {`N4 construtiva · barra ${i + 1} de ${constructive.branches} · sem contribuição resistente`}
+                      </title>
+                    </path>
+                  ))}
                 </g>
                 <g
                   {...groupProps("N1")}

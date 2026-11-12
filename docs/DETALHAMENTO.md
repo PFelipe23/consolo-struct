@@ -27,6 +27,20 @@ Uma alça horizontal em U fornece **dois ramos longitudinais**. Portanto, quatro
 
 As alças de uma mesma camada são aninhadas, respeitando mandris, cobrimento, distância livre e espaçamento máximo entre ramos. Uma combinação que não cabe recebe pendência impeditiva, sem diminuir o mandril para produzir uma aparência de solução. Na ancoragem soldada, os ramos retos e a barra transversal são quantificados separadamente; as soldas precisam de sua especificação e verificação.
 
+## N3 de dois/quatro ramos e N4 construtiva
+
+A guia Armaduras permite escolher **2 ou 4 ramos efetivos de N3 por posição**. A distribuição longitudinal é a mesma do cálculo. Cada posição produz um estribo fechado externo; com quatro ramos, também um grampo interno em U com duas pernas e ganchos de 135°, da mesma bitola. O quadro registra separadamente as duas barras físicas (N3 e N3G), com comprimentos próprios em cada seção.
+
+**N4 · Armadura construtiva** é obrigatória, com duas ou quatro barras derivadas de N3 e Ø8 mm inicial editável. Substitui o porta-estribos opcional; sua configuração antiga não permanece no fluxo ativo nem gera barras adicionais. N4 não participa de resistência ou sugestão automática.
+
+O eixo longitudinal acompanha a poligonal inferior com afastamento normal baseado em cobrimento, bitola N3, metade da bitola N4 e folga para o canto arredondado do estribo. As posições transversais são simétricas, uma por vértice inferior interno. O percurso se prolonga no suporte, com cobrimento posterior, e dobra verticalmente na ponta, com mandril da própria bitola e ponta reta mínima geométrica de 8φ. O gerador não interpreta essa ponta como dimensionamento resistente/ancoragem certificada da N4.
+
+`detailing/transverse.ts` é a fonte comum das formas N3/N4, projeções da modelagem, seções, 3D e quadros. Arcos e retas do eixo determinam o desenvolvimento; o corte da N4 nos desenhos considera interseções reais do percurso com o plano da seção. A quantidade do tipo multiplica comprimento e massa uma única vez.
+
+Falta de espaço, invasão de cobrimento e colisão com N1 geram pendência impeditiva. Não se reduzem bitola, cobrimento, mandril ou ponta para aparentar solução. No modo viga, a positiva continua independente, identificada como **P1**; N4 também é produzida e eventual colisão entre as famílias deve ser compatibilizada pelo projetista. As barras são mantidas e quantificadas separadamente enquanto houver a pendência.
+
+As posições usam prefixos de família estáveis: N1, N2, N2I (costura inferior), N3, N3G, N4, P1 (positiva), TS (transversal soldada) e PINO. Formas diferentes da mesma família recebem sufixos, como N3-1. A convenção pública das especiais passa a **N5 fendilhamento e N6 suspensão**; suas formas integrais continuam fora do gerador e, quando informadas, mantêm a pendência existente.
+
 ## Comprimentos de corte e ganchos
 
 O comprimento nominal é a soma dos segmentos retos e dos arcos da **linha de centro**. Não se obtém somando cotas externas. Para curva de diâmetro interno D e bitola φ, o raio da linha de centro é `(D + φ)/2`.
