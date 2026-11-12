@@ -41,7 +41,7 @@ Produz: círculos N2 internos ao contorno visível de N3.
 - [x] Usar posição interna derivada de cobrimento/bitolas e raio proporcional à escala, incluindo traços e cantos arredondados.
 - [x] Executar regressões, comparar entradas/resultados e inspecionar capturas claro/escuro.
 - [x] Executar format:check, check (280), build e test:e2e (84); revisão independente sem defeitos acionáveis.
-- [ ] Publicar segundo PR focado, dependente da integração de #37.
+- [x] Publicado PR #38, dependente da integração de #37.
 
 ## Registro
 
