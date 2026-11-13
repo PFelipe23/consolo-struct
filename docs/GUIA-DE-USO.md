@@ -36,7 +36,7 @@ Selecione o consolo e revise geometria, materiais, cargas, armaduras e a aba **C
 - No modo H estimado, H digitado é **adicional** ao coeficiente do apoio. No modo análise, é a resultante total e exige justificativa.
 - Ações já de cálculo devem incluir γf e γn; não há segunda majoração.
 - N1 conta ramos longitudinais; N2 mantém dois ramos efetivos por estribo.
-- Em **Armaduras > N3**, escolha **2 ou 4 ramos efetivos por posição**. Quatro ramos usam estribo externo mais grampo interno. Quantidade continua sendo o número de posições ao longo do consolo.
+- Em **Armaduras > N3**, escolha **2 ou 4 ramos efetivos por posição**. Quatro ramos usam estribo externo mais grampo interno em planos longitudinais distintos, com folga verificada no detalhamento. A seção identifica a projeção do par; arranjos congestionados recebem erro específico. Quantidade continua sendo o número de posições ao longo do consolo.
 - **N4 · Armadura construtiva** é obrigatória. Edite somente sua bitola (padrão Ø8); a quantidade de 2 ou 4 barras deriva de N3. Aparece na elevação, seção, 3D e detalhamento, sem contribuição resistente ou participação na sugestão automática.
 - Em Cálculo > Armaduras complementares, **N5 é fendilhamento e N6 é suspensão**, com dois ramos efetivos, mantendo os campos e valores semânticos anteriores. Não se contam novamente em N2/N3.
 - Mudanças de ramos/bitola participam de Desfazer/Refazer, são independentes por peça e invalidam a memória anterior. Ao detalhar, confira as pendências de N4, inclusive interferências com N1 ou com a positiva P1 do modo viga.

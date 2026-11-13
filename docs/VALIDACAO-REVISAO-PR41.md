@@ -10,7 +10,7 @@ O grampo N3G agora ocupa um plano próprio. Mantêm-se as estações externas de
 
 A distribuição dos grampos conserva o passo máximo externo quando cabe. Pares que se aproximam demais no meio do comprimento ou não cabem entre os cobrimentos recebem erros específicos `transverse-clearance`, `transverse-clash` e/ou `transverse-cover`. O detector de colisão inclui segmentos e curvas amostradas, além da verificação da distância entre planos. Não se reduz folga, cobrimento, diâmetro, mandril ou quantidade para aparentar uma solução. O cálculo resistente mantém os quatro ramos e seus limites existentes; uma capacidade numérica não libera um arranjo com erro de fabricação.
 
-A seção A–A passa a identificar a **projeção do par**, com as duas estações; as N4 são representadas no plano do ramo que as contém. Elevação, planta, 3D, detalhamento e quantitativos usam os mesmos planos reais. Não há alteração de arquivo/schema, classes de aço, geometria do concreto, N1, N2, percurso longitudinal de N4 ou capacidade da própria N4.
+A seção A–A passa a identificar a **projeção do par**, com as duas estações; as N4 são representadas no plano do ramo que as contém. Elevação, planta, 3D, detalhamento e quantitativos usam os mesmos planos reais. Não há alteração de arquivo/schema, classes de aço, geometria do concreto, percurso físico de N1/N2, percurso longitudinal de N4 ou capacidade da própria N4.
 
 ## Caso numérico em mm
 
@@ -34,7 +34,34 @@ A correção isolada passou nos oito testes novos de geometria e nos 35 testes e
 
 Uma comparação direta com o checkout original do PR verificou 36 cálculos completos, combinando dois/quatro ramos, três modelos, manter/remover concreto e três bitolas N3: resultados permaneceram idênticos. Nos 18 casos de dois ramos, o modelo completo de detalhamento e o modelo 3D também permaneceram idênticos.
 
-A composição com #42 (que preserva #37/#24) e #38 será registrada abaixo após a validação do conjunto. Não há merge no repositório original; a atualização é feita na branch do fork que alimenta o PR existente.
+A composição incorpora os commits originais de #42 (incluindo #37/#24) e #38, preservando autoria e histórico: `b154f1c6317b68174b16a8f72ef3273f94a7d46b` e `446a9e11007c3755177b5c0a33b1555449d7c173` são ancestrais. Os merges locais são `b1dfcc5` e `ea8df50`. Conflitos do changelog foram resolvidos preservando os dois conjuntos de entradas. Não há merge no repositório original; a atualização é feita na branch do fork que alimenta o PR existente.
+
+N2 em #38 pressupunha o antigo retângulo gráfico de N3. O cálculo do afastamento dos símbolos passou a usar o contorno físico, o raio de mandril e a espessura real de N3 da #41. As regressões agora leem o path efetivamente renderizado e verificam o símbolo inteiro, inclusive os traços, com ambas as faces, temas, camadas, zoom/pan e quatro ramos. Níveis, contagens e cálculo de N2 permanecem iguais.
+
+Dois cenários de #38 eram viáveis no retângulo gráfico anterior, mas não no contorno inclinado de N3: a edição para cobrimento 35 / N2 Ø12,5 / N3 Ø8 e a peça 500 × 600, ponta de 200 mm, N2 Ø16, três camadas. Para conferir contenção integral, as fixtures usam agora pontas de 300 e 500 mm, respectivamente. O segundo cenário original continua em uma regressão própria: a seção mostra **N2 sem espaço no contorno projetado de N3** e conserva os níveis originais. O aviso se refere à projeção e não se apresenta como nova verificação resistente ou certificação de interferência global N2/N3.
+
+A regressão de #42 que comparava o SVG inteiro da elevação foi adaptada para ignorar apenas `data-transverse-position`: a coordenada transversal de N4 muda com a largura, embora a projeção longitudinal permaneça igual. Todas as coordenadas visíveis continuam comparadas. As regressões de d’ e enquadramento em 1000/2000/6000 mm permanecem ativas.
+
+A correção isolada está em `934438b`, seguida dos dois merges e de uma correção de composição. O conjunto final passou em:
+
+| Comando                                                                                               | Resultado                       |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `npm run check`                                                                                       | 331 testes em 19 arquivos       |
+| `npx playwright test tests/e2e/editor.spec.ts tests/e2e/n3-interference.spec.ts tests/e2e/n4.spec.ts` | 22 testes                       |
+| `npm run format:check`                                                                                | Aprovado                        |
+| `npm run build`                                                                                       | Aprovado                        |
+| `npx playwright install chromium`                                                                     | Executado; navegador disponível |
+| `npm run test:e2e`                                                                                    | 96 testes em 17 arquivos        |
+
+As falhas intermediárias de composição não foram ignoradas: incluíram uma expectativa de metadados de N4 no SVG, uma leitura de N3 como retângulo e os dois cenários sem espaço citados acima. A suíte final foi executada após as correções, sem editar código durante sua execução. O build conserva os avisos preexistentes do Zod, importação de `detailing/job.ts` e tamanho de chunks.
+
+Capturas atualizadas da composição:
+
+- [Seção A–A com d’, N2, N3/N3G e N4](images/pr41-revisao-secao.png)
+- [Elevação com os planos longitudinais distintos](images/pr41-revisao-elevacao.png)
+- [Modelo 3D com o par separado](images/pr41-revisao-3d.png)
+
+As imagens anteriores da entrega original em `VALIDACAO-N4-CONSTRUTIVA.md` são históricas. Esta revisão não incorpora as outras propostas ainda abertas, como #39, #43 ou a migração de aço da issue #35: a colisão entre os dois contratos independentes de esquema 5 ainda precisa ser conciliada antes de integrar essa migração de aço junto com N4.
 
 ## Limitações
 

@@ -147,33 +147,33 @@ export default function Drawing({
   const sectionLeft = 400 - (g.width * s) / 2;
   const stitchRadius = (p.rebar.stitchDiameter * s) / 2;
   const stitchInset = (depth: number) => {
-    // Erode N3's rounded centerline by the complete N2 symbol and both
-    // half-strokes. This graphical clearance does not change bar levels
-    // or define an additional physical reinforcement spacing rule.
-    const corner = Math.min(
-      8,
-      ((g.width - 2 * g.cover) * s) / 2,
-      ((g.height - 2 * g.cover) * s) / 2,
-    );
-    const clearance = stitchRadius + s / 2 + 2.5 / 2;
+    // Erode the actual outer N3 contour, with its physical radius and stroke.
+    // This symbol clearance does not change N2 levels or reinforcement design.
+    const outer = rootSection.sections[0];
+    const corner = rootSection.radius * s;
+    const clearance =
+      stitchRadius + s / 2 + (p.rebar.stirrupDiameter * s) / 2 + s / 2;
     const edgeDistance =
-      Math.min(depth - g.cover, g.height - g.cover - depth) * s;
+      Math.min(
+        depth - rootSection.stirrupOffset,
+        rootSection.stirrupOffset + outer.height - depth,
+      ) * s;
     const innerCorner = Math.max(0, corner - clearance);
     const cornerInset =
       corner -
       Math.sqrt(
         Math.max(0, innerCorner ** 2 - Math.max(0, corner - edgeDistance) ** 2),
       );
-    return (
-      g.cover * s +
-      Math.max(
-        (p.rebar.stirrupDiameter + p.rebar.stitchDiameter / 2) * s,
-        clearance,
-        cornerInset,
-      ) +
-      s / 2
-    );
+    return rootSection.stirrupOffset * s + Math.max(clearance, cornerInset);
   };
+  const stitchProjectionFits = stitchLevels.every(
+    (depth) =>
+      Math.min(
+        depth - rootSection.stirrupOffset,
+        rootSection.stirrupOffset + rootSection.sections[0].height - depth,
+      ) >=
+      (p.rebar.stirrupDiameter + p.rebar.stitchDiameter) / 2,
+  );
   const sectionCentroid = 140 + layout.dPrime * s;
   const dPrimeLabel = `d’ = ${number(layout.dPrime / 10, 1)} cm`;
   const ox = (800 - (g.columnWidth + g.length) * s) / 2 + g.columnWidth * s,
@@ -269,6 +269,18 @@ export default function Drawing({
               height={g.height * s}
               fill={`url(#${uid}concrete)`}
             />
+            {rebar && !stitchProjectionFits && (
+              <text
+                x={400}
+                y={135}
+                textAnchor="middle"
+                className="dimension-text"
+                fill="var(--danger)"
+              >
+                N2 sem espaço no contorno projetado de N3: conferir disposição;
+                níveis preservados.
+              </text>
+            )}
             {rebar && rootSection.branches === 4 && (
               <text
                 x={400}

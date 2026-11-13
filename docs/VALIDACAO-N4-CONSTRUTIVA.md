@@ -79,3 +79,7 @@ A execução usou o modelo disponibilizado nesta sessão, sem escolher outro mod
 As regras de ramos/quantidade/bitola N4 seguem as decisões de produto confirmadas na issue. Não houve consulta ou reprodução integral de normas nem alteração da demanda N3 ou dos critérios resistentes de N2/N5/N6. N5/N6 continuam sem detalhamento integral; a compatibilização de suporte, aparelho de apoio, soldas e disposição executiva continua fora do gerador. Testes aprovados não representam certificação normativa ou liberação para execução.
 
 PR manual sugerido: **Adiciona N4 construtiva obrigatória e N3 com dois ou quatro ramos efetivos**. Relacionar com **Closes #31** e citar os impactos de migração, cálculo e exportações acima.
+
+## Revisão posterior ao comentário do PR #41
+
+O comentário do mantenedor confirmou uma interferência não coberta pela entrega original: N3 e N3G compartilhavam o trecho inferior no mesmo plano. A correção, as regressões que falharam antes dela, os exemplos numéricos e a composição com #42/#38 estão em [Validação da revisão do PR #41](VALIDACAO-REVISAO-PR41.md). Esse registro posterior substitui a pendência de composição acima para essas duas frentes; as capturas desta página são da versão anterior à correção física.

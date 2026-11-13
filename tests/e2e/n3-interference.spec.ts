@@ -50,11 +50,9 @@ test("arranjo congestionado exibe erro físico específico de N3/N3G", async ({
     .getByRole("button", { name: "Detalhamento", exact: true })
     .click();
   await expect(
-    page
-      .locator(".detail-issues .error")
-      .filter({
-        hasText: "Há interferência física entre estribos N3 e/ou grampos N3G",
-      }),
+    page.locator(".detail-issues .error").filter({
+      hasText: "Há interferência física entre estribos N3 e/ou grampos N3G",
+    }),
   ).toBeVisible();
   await expect(
     page
