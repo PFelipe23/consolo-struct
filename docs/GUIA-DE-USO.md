@@ -70,6 +70,8 @@ Na **Seção A–A** da modelagem, a cota **d’**, à esquerda, indica a distâ
 
 Consulte as [imagens e verificações da cota d’](VALIDACAO-SECAO-AA-DPRIME.md).
 
+Na mesma seção, os círculos da costura N2 são representados por dentro do estribo N3, com tamanho proporcional à bitola. A representação considera os traços e os cantos de N3, acompanha zoom/pan e mantém a seleção da família N2. Os níveis e as quantidades continuam os definidos pelas entradas existentes; o desenho não substitui a conferência de compatibilidade física. Veja a [validação da seção integrada](VALIDACAO-SECAO-AA-N2.md).
+
 A vista 3D e suas armaduras são representações esquemáticas, não análise resistente espacial nem detalhamento executivo. As setas mostram ações de entrada da combinação Principal, sem escala de intensidade. A câmera não altera os dados de cálculo.
 
 ### Configurações
