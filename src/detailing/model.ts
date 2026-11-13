@@ -490,6 +490,7 @@ export function buildDetail(piece: Piece): Detail {
   );
   const { offset: transverseOffset, pitch } = stirrupLayout(p);
   const transverse = transverseGeometry(p);
+  transverse.problems.forEach(({ code, message }) => issue(code, message));
   for (const section of transverse.sections) {
     add({
       family: section.internal ? "stirrupInner" : "stirrup",
@@ -505,7 +506,7 @@ export function buildDetail(piece: Piece): Detail {
       height: section.height,
       hookExtra: 0,
       hookTail: Math.max(5 * r.stirrupDiameter, 50),
-      note: `${section.internal ? "Grampo interno" : "Fechado externo"}; 2 ramos; 2 ganchos de 135°${pitch ? `; c/${(pitch / 10).toFixed(1)} cm` : ""}`,
+      note: `${section.internal ? "Grampo interno" : "Fechado externo"}; 2 ramos; 2 ganchos de 135°${pitch ? `; c/${(pitch / 10).toFixed(1)} cm` : ""}${section.internal ? `; pareado com N3, afastamento longitudinal ${(transverse.innerShift / 10).toFixed(2)} cm para o interior` : ""}`,
       locations: [{ x: section.x, z: transverseOffset }],
     });
   }

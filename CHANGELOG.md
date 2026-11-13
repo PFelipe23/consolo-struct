@@ -4,6 +4,8 @@ Este arquivo resume as mudanças documentadas no código-fonte recebido. Não pr
 
 ## Não lançado
 
+- Corrige a interferência física N3/N3G do PR #41: grampo em plano longitudinal próprio, com altura recalculada, projeção identificada na seção e quantitativos coerentes. Reutiliza a folga livre de N3; arranjos sem espaço recebem erro impeditivo de interferência, folga ou cobrimento, sem alterar demanda, passo ou quantidade de ramos.
+
 - N3 admite 2 ou 4 ramos efetivos por posição; quatro ramos detalham um estribo fechado externo e um grampo interno da mesma bitola. A área fornecida e a sugestão usam a quantidade de ramos, preservando demanda e espaçamento longitudinal.
 - Acrescenta N4 construtiva obrigatória, Ø8 mm inicial editável em Armaduras, com uma barra por vértice inferior de N3. Geometria comum às vistas 2D/3D, detalhamento e exportações; prolongamento no suporte, face inferior inclinada/recortada e dobra frontal com mandril. Interferências geram pendências sem modificar entradas físicas. N4 não contribui para resistência.
 - Arquivo de projeto passa ao esquema 5 e migra esquemas 1–4 com dois ramos N3 e N4 Ø8, retirando o porta-estribos opcional. Fendilhamento e suspensão passam a N5/N6, sem alteração dos campos semânticos. A positiva do modo viga permanece separada como P1; colisões com N4 são informadas.

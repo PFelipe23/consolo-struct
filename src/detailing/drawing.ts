@@ -3,6 +3,7 @@ import {
   transverseGeometry,
   translatePath,
   sectionDepths,
+  projectedConstructiveSection,
 } from "./transverse";
 import type { Project } from "../domain/model";
 import { number } from "../domain/model";
@@ -458,7 +459,15 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
     : H - (slope * cutDepth) / 10;
   text(sectionX, y - 8, `CORTE A-A / x=${cm(cutDepth)} cm`, 2.8);
   rect(sectionX, y, B, sectionH);
-  for (const section of transverseGeometry(p, cutDepth).sections)
+  const sectionPair = transverseGeometry(p, cutDepth);
+  if (sectionPair.branches === 4)
+    text(
+      sectionX,
+      y - 4,
+      `N3G projetado de x=${cm(sectionPair.sections[1].x)} cm; N4 no plano de cada ramo`,
+      1.8,
+    );
+  for (const section of sectionPair.sections)
     barPath(
       translatePath(
         section.path,
@@ -468,14 +477,16 @@ export function pieceDrawing(project: Project, d: Detail): Drawing {
       sectionX,
       y,
     );
-  for (const v of constructive.positions)
-    for (const depth of sectionDepths(constructive.path, cutDepth))
-      entities.push({
-        type: "circle",
-        center: { x: sectionX + v / 10, y: y + depth / 10 },
-        radius: constructive.diameter / 20,
-        layer: "ARMADURAS",
-      });
+  for (const { v, depth } of projectedConstructiveSection(
+    constructive,
+    sectionPair.sections,
+  ))
+    entities.push({
+      type: "circle",
+      center: { x: sectionX + v / 10, y: y + depth / 10 },
+      radius: constructive.diameter / 20,
+      layer: "ARMADURAS",
+    });
   for (const b of positiveBars) {
     // Depth of the sloped bottom chord at the section, inside the stirrup.
     const depth =

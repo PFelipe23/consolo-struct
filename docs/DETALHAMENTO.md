@@ -83,3 +83,11 @@ npm run test:e2e
 ```
 
 O gerador de exemplos usa o carregador TypeScript do Vite já instalado no projeto. Não exige um conversor DWG no computador do usuário: a referência foi analisada durante o desenvolvimento e as novas saídas DXF são geradas diretamente pelo aplicativo.
+
+## Disposição física do par N3/N3G
+
+Com quatro ramos, N3 e N3G ocupam planos longitudinais distintos. N3 conserva as estações e o passo anteriores. O grampo é deslocado para o interior por `Δx = φN3 + max(20 mm; φN3; 1,2·agregado)`, reutilizando a folga livre de N3 já adotada pelo gerador. O sentido muda na metade do comprimento para respeitar os cobrimentos nas duas extremidades. Cada grampo recebe altura e comprimento calculados na sua própria estação, incluindo a face inclinada/recortada e as pontas completas dos ganchos de 135°.
+
+A seção identifica a projeção do par e suas estações. As quatro N4 são projetadas no plano do ramo que as contém; não se apresentam os dois estribos como se ocupassem uma única seção física. Elevação, planta, 3D, formas e quantitativos usam as mesmas coordenadas. As duas peças continuam compondo quatro ramos por par, sem mudar demanda ou passo de cálculo; o maior passo da distribuição dos grampos não excede o passo externo quando o arranjo cabe.
+
+Falta de espaço longitudinal, invasão do cobrimento ou colisão de trechos/curvas de N3/N3G geram erros impeditivos específicos. Não se diminui a folga, o diâmetro ou o mandril, nem se move N1 ou N4 para esconder o problema. O arranjo continua sujeito à conferência executiva; a capacidade numérica de quatro ramos não aprova um detalhamento congestionado. Consulte [a revisão do PR #41](VALIDACAO-REVISAO-PR41.md).

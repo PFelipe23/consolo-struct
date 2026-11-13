@@ -127,6 +127,10 @@ export function transverseGeometry(p: Piece, sectionX?: number) {
     { length: branches },
     (_, i) => offset + (i * (g.width - 2 * offset)) / (branches - 1),
   );
+  // N3G is a separate physical piece, paired longitudinally with N3.
+  // Reuse the existing N3 free-spacing criterion; never reduce cover or bend radius.
+  const clearance = Math.max(20, r.stirrupDiameter, 1.2 * p.design.aggregate);
+  const innerShift = r.stirrupDiameter + clearance;
   const sections = (
     sectionX === undefined ? layout.positions : [sectionX]
   ).flatMap((x) => {
@@ -145,11 +149,69 @@ export function transverseGeometry(p: Piece, sectionX?: number) {
     const left = positions[1] - (offset - layout.offset),
       right = positions[2] + (offset - layout.offset);
     const w = right - left;
-    const path = openStirrup(w, height, r.stirrupDiameter, mandrel);
-    return [outer, { x, internal: true, width: w, height, offset: left, path }];
+    // Move toward the interior at either end; keep every outer station and its pitch.
+    const innerX = x <= g.length / 2 ? x + innerShift : x - innerShift;
+    const innerHeight =
+      bottomOffsetDepth(concrete, innerX, layout.offset) - layout.offset;
+    const path = openStirrup(w, innerHeight, r.stirrupDiameter, mandrel);
+    return [
+      outer,
+      {
+        x: innerX,
+        internal: true,
+        width: w,
+        height: innerHeight,
+        offset: left,
+        path,
+      },
+    ];
   });
+  const problems: { code: string; message: string }[] = [];
+  if (branches === 4 && sectionX === undefined) {
+    if (
+      sections.some(
+        (s) => s.x < layout.first - 1e-6 || s.x > layout.last + 1e-6,
+      )
+    )
+      problems.push({
+        code: "transverse-cover",
+        message:
+          "O par N3/N3G não cabe entre as linhas de cobrimento longitudinal; reveja a geometria sem reduzir o afastamento, a bitola ou as dobras.",
+      });
+    const sorted = [...sections].sort((a, b) => a.x - b.x);
+    if (sorted.slice(1).some((s, i) => s.x - sorted[i].x < innerShift - 1e-6))
+      problems.push({
+        code: "transverse-clearance",
+        message: `Falta espaço longitudinal entre as peças de N3/N3G: manter folga livre de ${clearance.toLocaleString("pt-BR")} mm, além da bitola. Rever quantidade, agregado ou geometria; os quatro ramos calculados não validam este arranjo físico.`,
+      });
+    const points = (s: (typeof sections)[number]) =>
+      samplePath(translatePath(s.path, s.offset, layout.offset), 24).map(
+        (pt) => [s.x, pt.x, pt.y] as Point3,
+      );
+    for (let i = 0; i < sections.length; i++) {
+      if (
+        sections
+          .slice(i + 1)
+          .some(
+            (s) =>
+              Math.abs(s.x - sections[i].x) < r.stirrupDiameter &&
+              pathsClash(points(sections[i]), points(s), r.stirrupDiameter),
+          )
+      ) {
+        problems.push({
+          code: "transverse-clash",
+          message:
+            "Há interferência física entre estribos N3 e/ou grampos N3G, inclusive trechos inferiores e dobras. O arranjo de quatro ramos não pode ser fabricado assim.",
+        });
+        break;
+      }
+    }
+  }
   return {
     branches,
+    clearance,
+    innerShift,
+    problems,
     diameter,
     offset,
     positions,
@@ -250,4 +312,26 @@ export function constructiveGeometry(p: Piece) {
     mandrel: 2 * radius - diameter,
     problems,
   };
+}
+
+/** Project a paired N3/N3G assembly; each N4 is cut in its own containing plane. */
+export function projectedConstructiveSection(
+  constructive: ReturnType<typeof constructiveGeometry>,
+  sections: ReturnType<typeof transverseGeometry>["sections"],
+) {
+  return constructive.positions.flatMap((v, i) => {
+    const plane =
+      sections[
+        constructive.branches === 4 &&
+        i > 0 &&
+        i < constructive.positions.length - 1
+          ? 1
+          : 0
+      ];
+    return sectionDepths(constructive.path, plane.x).map((depth) => ({
+      v,
+      depth,
+      x: plane.x,
+    }));
+  });
 }

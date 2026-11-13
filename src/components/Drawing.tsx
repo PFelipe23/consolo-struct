@@ -2,7 +2,7 @@ import {
   constructiveGeometry,
   transverseGeometry,
   translatePath,
-  sectionDepths,
+  projectedConstructiveSection,
 } from "../detailing/transverse";
 import { samplePath } from "../detailing/geometry";
 import { tieLayout } from "../domain/engine";
@@ -111,7 +111,13 @@ export default function Drawing({
   const uid = useId().replaceAll(":", "");
   const g = p.geometry;
   const transverse = useMemo(() => transverseGeometry(p), [p]);
-  const rootSection = useMemo(() => transverseGeometry(p, 0), [p]);
+  const rootSection = useMemo(
+    () =>
+      (p.rebar.stirrupBranches ?? 2) === 4
+        ? { ...transverse, sections: transverse.sections.slice(0, 2) }
+        : transverseGeometry(p, 0),
+    [p, transverse],
+  );
   const constructive = useMemo(() => constructiveGeometry(p), [p]);
   const reaction = reactionGeometry(p);
   const layout = tieLayout(p);
@@ -225,6 +231,20 @@ export default function Drawing({
               height={g.height * s}
               fill={`url(#${uid}concrete)`}
             />
+            {rebar && rootSection.branches === 4 && (
+              <text
+                x={400}
+                y={120}
+                textAnchor="middle"
+                className="dimension-text"
+              >
+                N3/N3G e N4: projeção do par · x ={" "}
+                {rootSection.sections
+                  .map((s) => number(s.x / 10, 2))
+                  .join(" / ")}{" "}
+                cm
+              </text>
+            )}
             {rebar && (
               <>
                 <g
@@ -236,6 +256,7 @@ export default function Drawing({
                     <path
                       key={i}
                       data-n3-part={section.internal ? "grampo" : "externo"}
+                      data-longitudinal-position={section.x}
                       d={samplePath(
                         translatePath(
                           section.path,
@@ -253,17 +274,19 @@ export default function Drawing({
                   ))}
                 </g>
                 <g {...groupProps("N4")}>
-                  {constructive.positions.flatMap((v, i) =>
-                    sectionDepths(constructive.path, 0).map((depth, j) => (
-                      <circle
-                        key={`${i}-${j}`}
-                        cx={400 + (v - g.width / 2) * s}
-                        cy={140 + depth * s}
-                        r={(constructive.diameter * s) / 2}
-                        strokeWidth="0.5"
-                      />
-                    )),
-                  )}
+                  {projectedConstructiveSection(
+                    constructive,
+                    rootSection.sections,
+                  ).map(({ v, depth, x }, i) => (
+                    <circle
+                      key={i}
+                      data-longitudinal-position={x}
+                      cx={400 + (v - g.width / 2) * s}
+                      cy={140 + depth * s}
+                      r={(constructive.diameter * s) / 2}
+                      strokeWidth="0.5"
+                    />
+                  ))}
                 </g>
                 <g {...groupProps("N1")}>
                   {layout.rows.flatMap((row, j) =>
@@ -418,6 +441,7 @@ export default function Drawing({
                     <path
                       key={i}
                       data-n3-part={section.internal ? "grampo" : "externo"}
+                      data-longitudinal-position={section.x}
                       d={`M${X(section.x)} ${Y(transverse.stirrupOffset)}V${Y(transverse.stirrupOffset + section.height)}`}
                     />
                   ))}
