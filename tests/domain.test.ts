@@ -32,12 +32,48 @@ describe("Geometria em unidades canônicas", () => {
   });
 });
 describe("Arquivos e invalidação dos resultados", () => {
+  it.each([4, 5])(
+    "abre esquema %i sem política de γn com floor12 e justificativa vazia",
+    (schemaVersion) => {
+      const original = exampleProject(),
+        legacy = JSON.parse(JSON.stringify(original));
+      legacy.schemaVersion = schemaVersion;
+      for (const p of legacy.pieces) {
+        delete p.design.gammaNPolicy;
+        delete p.design.gammaNJustification;
+        if (schemaVersion === 4) {
+          delete p.rebar.stirrupBranches;
+          delete p.rebar.constructiveDiameter;
+        }
+      }
+      const opened = decodeProject(JSON.stringify(legacy));
+      expect(opened.schemaVersion).toBe(5);
+      expect(opened).toEqual(original);
+      for (const p of opened.pieces) {
+        expect(p.design.gammaNPolicy).toBe("floor12");
+        expect(p.design.gammaNJustification).toBe("");
+      }
+    },
+  );
+  it("preserva tabela e justificativa por peça no round-trip do arquivo", () => {
+    const p = exampleProject();
+    Object.assign(p.pieces[0].rebar, {
+      stirrupBranches: 4,
+      constructiveDiameter: 10,
+    });
+    Object.assign(p.pieces[0].design, {
+      gammaNPolicy: "table9062",
+      gammaNJustification:
+        "Condições de produção e carregamento conferidas pelo responsável.",
+    });
+    expect(decodeProject(JSON.stringify(p))).toEqual(p);
+  });
   it("abre aço legado personalizado, preserva o número e mantém unsupported", () => {
     const project = exampleProject();
     project.pieces[0].materials.fyk = 420;
     const opened = decodeProject(JSON.stringify(project));
     expect(opened).toEqual(project);
-    expect(opened.schemaVersion).toBe(4);
+    expect(opened.schemaVersion).toBe(5);
     const result = calculate(opened.pieces[0]);
     expect(result.status).toBe("unsupported");
     expect(result.reasons).toContain(
@@ -48,7 +84,7 @@ describe("Arquivos e invalidação dos resultados", () => {
       420,
     );
   });
-  it("abre projeto antigo com os coeficientes padrão sem mudar a versão", () => {
+  it("abre projeto antigo com os coeficientes padrão após migrar para esquema 5", () => {
     const original = exampleProject();
     const legacy = JSON.parse(JSON.stringify(original));
     for (const p of legacy.pieces) {
@@ -56,7 +92,7 @@ describe("Arquivos e invalidação dos resultados", () => {
       delete p.design.gammaS;
     }
     const decoded = decodeProject(JSON.stringify(legacy));
-    expect(decoded.schemaVersion).toBe(4);
+    expect(decoded.schemaVersion).toBe(5);
     for (const p of decoded.pieces) {
       expect(p.design.gammaC).toBe(1.4);
       expect(p.design.gammaS).toBe(1.15);

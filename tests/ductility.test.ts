@@ -406,7 +406,7 @@ describe("Ductilidade — exemplos oficiais e saídas", () => {
       before = structuredClone(project);
     project.pieces.forEach(calculate);
     expect(project).toEqual(before);
-    expect(project.schemaVersion).toBe(4);
+    expect(project.schemaVersion).toBe(5);
     expect(decodeProject(JSON.stringify(project))).toEqual(project);
   });
   it("a função de material mantém a definição existente de λ", () => {

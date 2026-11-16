@@ -25,7 +25,7 @@ O tema fica em **Configurações > Geral / Aparência**, além do acesso rápido
 
 Use **Novo projeto** e confirme nome, cliente e responsável em Dados do projeto. Cancelar mantém o projeto anterior. Use **Abrir** para carregar um projeto; o exemplo `examples/casos-validacao.lume.json` permite explorar o motor, e `examples/detalhamento/consolos-detalhados.lume.json` demonstra tirantes simples e duplos.
 
-Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 4. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
+Novos arquivos usam `.consolo.json`; os antigos `.lume.json` continuam reconhecidos. O esquema atual é 5. Esquemas 1–4 migram com N3 de dois ramos e N4 Ø8 mm; o antigo porta-estribos opcional é substituído pela N4 obrigatória. A migração não restaura resultados como atuais. Projetos antigos precisam da revisão dos parâmetros migrados antes de calcular. Salve com `Ctrl+S` (ou `Cmd+S` no macOS). Rascunhos do navegador e desktop são separados; transfira o arquivo de projeto para mudar de ambiente.
 
 ## 2. Conferir entradas
 
@@ -35,7 +35,11 @@ Selecione o consolo e revise geometria, materiais, cargas, armaduras e a aba **C
 - Use ponto ou vírgula decimal, sem separador de milhar.
 - No modo H estimado, H digitado é **adicional** ao coeficiente do apoio. No modo análise, é a resultante total e exige justificativa.
 - Ações já de cálculo devem incluir γf e γn; não há segunda majoração.
-- N1 conta ramos longitudinais. N2/N3/N4/N5 contam estribos fechados com dois ramos efetivos.
+- N1 conta ramos longitudinais; N2 mantém dois ramos efetivos por estribo.
+- Em **Armaduras > N3**, escolha **2 ou 4 ramos efetivos por posição**. Quatro ramos usam estribo externo mais grampo interno em planos longitudinais distintos, com folga verificada no detalhamento. A seção identifica a projeção do par; arranjos congestionados recebem erro específico. Quantidade continua sendo o número de posições ao longo do consolo.
+- **N4 · Armadura construtiva** é obrigatória. Edite somente sua bitola (padrão Ø8); a quantidade de 2 ou 4 barras deriva de N3. Aparece na elevação, seção, 3D e detalhamento, sem contribuição resistente ou participação na sugestão automática.
+- Em Cálculo > Armaduras complementares, **N5 é fendilhamento e N6 é suspensão**, com dois ramos efetivos, mantendo os campos e valores semânticos anteriores. Não se contam novamente em N2/N3.
+- Mudanças de ramos/bitola participam de Desfazer/Refazer, são independentes por peça e invalidam a memória anterior. Ao detalhar, confira as pendências de N4, inclusive interferências com N1 ou com a positiva P1 do modo viga.
 - Alterar bitolas, camadas, estribos ou cobrimento pode modificar a altura útil e o modelo resistente.
 - As combinações são fornecidas pelo projetista; não há geração automática segundo NBR 8681.
 
@@ -56,11 +60,17 @@ Para experimentar uma falha conhecida, no exemplo Curto-ELU reduza a ancoragem d
 ## 4. Navegar pelas vistas
 
 - Em 2D: botão central ou Espaço + arrastar para pan; roda para zoom no cursor; `F` enquadra.
-- Clique em uma cota para editar; `Enter` confirma e `Esc` cancela. `Ctrl+Z` desfaz e `Ctrl+Shift+Z` refaz.
+- Clique em uma cota de geometria para editar; `Enter` confirma e `Esc` cancela. `Ctrl+Z` desfaz e `Ctrl+Shift+Z` refaz.
 - Em **Vista 3D**, arraste com o botão esquerdo para orbitar e com central/direito ou Espaço para pan. Use os presets Frontal, Superior, Lateral e Isométrica.
 - Em **Exibir**, use Mostrar cotas, Mostrar cargas, Mostrar armaduras e Mostrar grade. A transparência fica junto à Vista 3D.
 - A árvore pode manter vários consolos expandidos. Expandir não troca a seleção. Clique em ×n para editar a quantidade.
 - Feche abas pelo × e reabra pelo navegador ou faixa de ferramentas. Fechar uma vista preserva o projeto.
+
+Na **Seção A–A** da modelagem, a cota **d’**, à esquerda, indica a distância do topo ao centroide de todas as barras do tirante, em centímetros com uma casa decimal. Com uma camada, termina no eixo das barras; com várias, usa o centroide ponderado pelas quantidades de cada camada, que pode ficar entre elas. O valor acompanha as entradas e o controle **Mostrar cotas**, mesmo com as armaduras ocultas. É uma cota de consulta, sem edição pelo desenho; as cotas **b** e **h** continuam editáveis.
+
+Consulte as [imagens e verificações da cota d’](VALIDACAO-SECAO-AA-DPRIME.md).
+
+Na mesma seção, os círculos da costura N2 são representados por dentro do estribo N3, com tamanho proporcional à bitola. A representação considera os traços e os cantos de N3, acompanha zoom/pan e mantém a seleção da família N2. Os níveis e as quantidades continuam os definidos pelas entradas existentes; o desenho não substitui a conferência de compatibilidade física. Veja a [validação da seção integrada](VALIDACAO-SECAO-AA-N2.md).
 
 A vista 3D e suas armaduras são representações esquemáticas, não análise resistente espacial nem detalhamento executivo. As setas mostram ações de entrada da combinação Principal, sem escala de intensidade. A câmera não altera os dados de cálculo.
 
@@ -81,6 +91,16 @@ O tema é uma preferência do aplicativo. As alternâncias de desenho mantêm os
 Itens **Em breve** são informativos, não executam ações nem salvam configurações. Não há formulário de preferências futuras nem botão Salvar/Aplicar. Nenhum critério ou resultado de engenharia é alterado por abrir esta aba.
 
 Capturas da aba: [tema claro](images/configuracoes-claro.png) e [tema escuro](images/configuracoes-escuro.png).
+
+#### Escolher a política de γn
+
+Abra **Configurações > Dimensionamento > Critérios da peça selecionada**, ou o mesmo comando em **Modelo**, e procure **Política do coeficiente γn** no painel Cálculo, junto ao processo de produção e à ação permanente predominante.
+
+**Piso conservador de 1,2 (padrão)** preserva o comportamento anterior. Para adotar explicitamente **Tabela NBR 9062, sem piso de 1,2**, escreva a justificativa do responsável técnico com ao menos dez caracteres. Sem justificativa suficiente, Calcular retorna **Fora do domínio do motor** e explica o motivo. O campo de mínimo γn desaparece nessa opção, mas seu valor é preservado para quando voltar ao padrão.
+
+Para moldado no local, a tabela fica desabilitada e vale o piso conservador, respeitando também o mínimo informado. A tela mostra a referência e o coeficiente adotado. A escolha da tabela gera **Conferir**, com os coeficientes e a justificativa nas saídas; ela não aprova o projeto nem afirma equivalência entre as normas. Forças já de cálculo continuam sem nova majoração.
+
+As escolhas afetam somente a peça selecionada, entram em Desfazer/Refazer e são guardadas com **Salvar projeto**. Recalcule depois de editar. Consulte os [critérios](CRITERIOS-DE-CALCULO.md#política-do-coeficiente-adicional-γn) e as [capturas e validações](VALIDACAO-POLITICA-GAMMA-N.md).
 
 #### Configurar o limite da biela
 

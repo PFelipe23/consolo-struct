@@ -876,6 +876,9 @@ h4 {
 .technical-drawing .dimension {
   cursor: pointer;
 }
+.technical-drawing .dimension-derived {
+  cursor: default;
+}
 .dimension path {
   stroke: var(--dimension);
   stroke-width: 1;
@@ -888,12 +891,12 @@ h4 {
   font-size: 14px;
   font-weight: 500;
 }
-.dimension:hover text,
+.dimension:not(.dimension-derived):hover text,
 .dimension-active text {
   fill: var(--accent);
   font-weight: 650;
 }
-.dimension:hover path,
+.dimension:not(.dimension-derived):hover path,
 .dimension-active path {
   stroke: var(--accent);
   stroke-width: 1.5;
@@ -2128,6 +2131,30 @@ kbd {
 .material-safety-warning ul {
   padding-left: 16px;
 }
+.gamma-n-control {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.gamma-n-control p {
+  margin: 8px 0;
+}
+.gamma-n-control select,
+.gamma-n-control textarea {
+  width: 100%;
+  min-width: 0;
+}
+.inspector .gamma-n-policy-field {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px 10px;
+}
+.gamma-n-policy {
+  display: block;
+  overflow-wrap: anywhere;
+}
 .design-panel summary {
   cursor: pointer;
   font-weight: 600;
@@ -2726,4 +2753,27 @@ kbd {
   .ductility-memory-values {
     grid-template-columns: 1fr;
   }
+}
+
+.bar-tag.N4 {
+  background: #98621c;
+  color: white;
+}
+.steel-N4 {
+  fill: #98621c;
+}
+.steel-N4:not(.steel-selected):not(:hover) {
+  stroke: #98621c;
+}
+[data-theme="dark"] .steel-N4 {
+  fill: #e5b875;
+}
+[data-theme="dark"] .steel-N4:not(.steel-selected):not(:hover) {
+  stroke: #e5b875;
+}
+.legend-line.N4 {
+  border-color: #98621c;
+}
+[data-theme="dark"] .legend-line.N4 {
+  border-color: #e5b875;
 }

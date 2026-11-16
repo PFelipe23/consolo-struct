@@ -1,4 +1,5 @@
 import { withoutAddedDuctility } from "./reference/without-added-ductility";
+import { legacyN4Labels } from "./reference/legacy-n4-labels";
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { designSchema } from "../src/domain/design";
@@ -18,8 +19,8 @@ import { suggestReinforcement } from "../src/domain/autodesign";
 
 describe("Coeficientes dos materiais — resistências em MPa", () => {
   // Resultados completos capturados antes desta alteração, no upstream 41c3a12.
-  // A comparação histórica exclui metadados já documentados e, agora,
-  // somente as três verificações/valores novos da issue #4 (helper explícito).
+  // A fixture mantém campos posteriores ausentes e normaliza os rótulos de N4,
+  // além dos metadados anteriores e dos três ids/valores novos de ductilidade.
   it.each([
     [
       "friction",
@@ -49,8 +50,13 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
         p.geometry.length = p.geometry.loadOffset + 90;
       }
       const legacy = JSON.parse(JSON.stringify(p));
+      delete legacy.rebar.stirrupBranches;
+      delete legacy.rebar.constructiveDiameter;
       delete legacy.design.gammaC;
       delete legacy.design.gammaS;
+      // Complete snapshots captured before the opt-in gamma-n policy.
+      delete legacy.design.gammaNPolicy;
+      delete legacy.design.gammaNJustification;
       // Projeto anterior ao recorte: campo ausente, sem normalizar o fingerprint.
       delete legacy.design.excessConcrete;
       // Issue #12: options off by default; only metadata and the anchorage
@@ -67,7 +73,7 @@ describe("Coeficientes dos materiais — resistências em MPa", () => {
         "anchorWeldedBar",
       ]);
       const raw = JSON.stringify(
-        withoutAddedDuctility(calculate(legacy)),
+        legacyN4Labels(withoutAddedDuctility(calculate(legacy))),
         (key, value) =>
           metadata.has(key)
             ? undefined

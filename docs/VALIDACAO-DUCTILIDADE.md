@@ -1,5 +1,7 @@
 # Validação — ductilidade, armadura máxima e rotação plástica (issue #4)
 
+**Atualização de 16/11/2026:** a composição com a master atual está registrada na seção final deste relatório. Os números da entrega original abaixo são mantidos como histórico.
+
 Contribuição para [a issue #4](https://github.com/ricardocorsini/consolo-struct/issues/4), na branch `feat/ductility-checks`, baseada no `master` original `fa8c8908f58ce05ccd5bfc17ba123045da166a54`. O fork foi sincronizado antes da implementação. As contribuições anteriores ainda não integradas ao original não foram incluídas nesta branch.
 
 ## Implementado
@@ -15,7 +17,7 @@ Contribuição para [a issue #4](https://github.com/ricardocorsini/consolo-struc
 
 `result.values` continua associado à combinação determinante do tirante, conforme o contrato anterior. Para a combinação crítica de cada verificação, consulte o `check` envelopado (com o nome do caso no detalhe) e os `values` da combinação correspondente. A memória numérica apresenta cada caso separadamente.
 
-A comparação de **escoamento do tirante antes do concreto** em bielas continua intacta. A nota **`ductility`, com estado `review`, no atrito é preservada**; os três critérios novos não a substituem. O limite histórico ω ≤ 0,15 não foi reintroduzido. Não há campos novos de entrada nem migração: o esquema permanece **4**.
+A comparação de **escoamento do tirante antes do concreto** em bielas continua intacta. A nota **`ductility`, com estado `review`, no atrito é preservada**; os três critérios novos não a substituem. O limite histórico ω ≤ 0,15 não foi reintroduzido. Não há campos novos de entrada nem migração por causa da ductilidade: a entrega original usava o esquema **4**; a atualização abaixo preserva o esquema **5** já integrado por N3/N4.
 
 ## Valores conferidos
 
@@ -90,3 +92,33 @@ Esses critérios não certificam ductilidade global, capacidade de rotação da 
 O aplicativo nativo Tauri não foi executado: Rust/Cargo e seus pré-requisitos não estão disponíveis no ambiente. Os testes web não substituem essa validação nem revisão técnica independente.
 
 PR manual sugerido: **Adiciona verificações de x/d, armadura máxima e rotação plástica**. Relacionar com **Closes #4** e citar os resultados, a compatibilidade e as limitações acima.
+
+## Atualização do PR #43 com a master de 16/11/2026
+
+A master original avançou para `057eec792dc1dbc7366c611852dcc94e872a7644`, integrando N3/N4, as correções da seção A–A e a política de γn. O fork foi sincronizado antes desta atualização. A implementação original `3495f01` foi preservada, e sua própria branch `feat/ductility-checks` recebeu a master atual com merge, para atualizar o PR #43 existente sem criar outra contribuição duplicada.
+
+A base atual passou com **364 testes em 20 arquivos** antes da integração. Foram resolvidos conflitos em changelog, critérios, CSS, CSV e snapshots, preservando as duas contribuições. A composição não muda as fórmulas da issue #4 nem os parâmetros físicos e resistentes já integrados.
+
+O CSV mantém as colunas N3/N4 e, quando aplicáveis, as cinco colunas de política γn; em seguida acrescenta as 21 colunas das três verificações novas. Cabeçalhos e linhas usam a mesma ordem. Os dois testes de `ductilityIntegration.test.ts`, com dois/quatro ramos, verificam as células por nome em um projeto misto de piso, tabela, rotação sem raiz e viga, incluindo largura das linhas, fórmulas, referências, estados e justificativa. A viga fica com células vazias nas colunas novas de um projeto misto; projetos só de viga conservam seu CSV anterior.
+
+As regressões antigas de N4 e γn passaram a usar o mesmo helper explícito `withoutAddedDuctility`, assim como as de materiais/classes já faziam. Foram excluídos **somente os três ids adicionais e os dez intermediários novos** da comparação dos snapshots históricos. Todos os hashes esperados, estados globais, verificações antigas, valores anteriores e assinaturas foram preservados. A normalização de rótulos de N4 continua aplicada somente onde os snapshots já a exigiam. Nenhuma falha de um critério antigo foi retirada para aprovar a composição. O teste de contrato da própria ductilidade foi atualizado de esquema 4 para o esquema 5 da master.
+
+Uma comparação direta contra um checkout separado da master `057eec7` validou **216 cálculos completos**, combinando três modelos × três fck (20/30/60) × três produções × duas políticas γn × dois/quatro ramos N3 × forças características/de cálculo. Após remover somente os ids/intermediários adicionais, todos os resultados completos permaneceram iguais, inclusive estados, fórmulas, referências e assinaturas. Também permaneceram idênticos **12 conjuntos de barras e pendências de detalhamento** e **72 CSVs de projetos exclusivamente de viga**.
+
+Os quatro arquivos oficiais, com **11 peças**, conservaram exatamente os estados da tabela acima; nenhuma nova reprovação exigiu discutir ou alterar um exemplo oficial. Os valores de referência da issue também foram recalculados: x/d = 0,29617349520515646 e rotações 0,254989219679547 / 0,46335953017128917. A diferença de uma unidade na última casa binária de a1 (122,28163992869875 em vez de 122,28163992869874) é uma diferença de representação em ponto flutuante; é da ordem de 1e−14 mm, sem mudança das fórmulas e dentro das tolerâncias do teste.
+
+### Validação da composição
+
+| Comando                           | Resultado                            |
+| --------------------------------- | ------------------------------------ |
+| `npm run check`                   | 395 testes em 22 arquivos, aprovados |
+| `npm run format:check`            | Aprovado                             |
+| `npm run build`                   | Aprovado                             |
+| `npx playwright install chromium` | Executado; Chromium disponível       |
+| `npm run test:e2e`                | 108 testes em 19 arquivos, aprovados |
+
+A suíte completa inclui os seis fluxos de ductilidade, os de N3/N4, interferência física, seção A–A, γn, histórico, arquivos e exportações. As oito falhas na primeira execução da composição eram snapshots de N4/γn que ainda incluíam os itens adicionais; foram resolvidas pelo helper documentado sem substituir hashes ou modificar expectativas numéricas antigas. Os testes da aplicação foram executados sem editar código durante sua execução. As capturas de ductilidade desta página foram atualizadas a partir da execução final de Chromium.
+
+Continuam não executados Tauri nativo (sem Rust/Cargo no ambiente) e conferência independente dos textos normativos. Não houve revisão técnica independente nesta sessão. O build mantém os avisos preexistentes de otimização do Zod, importação de `detailing/job.ts` e tamanho de chunks.
+
+A proposta de separação dos aços da issue #35 permanece fora desta composição porque ainda não está na master. Esta issue usa o fyd integral conforme sua fórmula original; a aplicação do teto de 435 MPa prevista na #35 deve ser conciliada quando aquela contribuição for integrada, com seus próprios testes e sem converter arquivos CA-60 automaticamente.

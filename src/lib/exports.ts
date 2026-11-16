@@ -1,3 +1,5 @@
+import { constructiveGeometry } from "../detailing/transverse";
+import { steelMass } from "../detailing/geometry";
 import {
   ductilityCheckIds,
   ductilityRows,
@@ -13,6 +15,31 @@ import {
 import { area, number, type Piece, type Project } from "../domain/model";
 import { concreteProfile, pieceVolume } from "../domain/profile";
 import { steelBondDescription, steelLabel } from "../domain/steel";
+import {
+  gammaNDecision,
+  gammaNDecisionText,
+  gammaNPolicyLabels,
+  gammaNReference,
+} from "../domain/gammaN";
+
+// Geometry exports keep their original bytes under the default policy.
+const gammaNGeometryNote = (p: Piece) =>
+  p.design.gammaNPolicy === "table9062"
+    ? gammaNDecisionText(gammaNDecision(p.design))
+    : "";
+const gammaNNoteRows = (text: string, max = 100) => {
+  const rows: string[] = [];
+  let line = "";
+  for (const word of text.match(new RegExp(`\\S{1,${max}}`, "g")) ?? []) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > max) {
+      rows.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) rows.push(line);
+  return rows;
+};
 
 const anchorRatioLabel = (v: Record<string, number>) =>
   v.anchorRatioFloor
@@ -30,6 +57,14 @@ export function piecePoints(p: Piece): [number, number][] {
 }
 export function toSvg(p: Piece): string {
   const g = p.geometry;
+  const gammaNote = gammaNGeometryNote(p);
+  const gammaRows = gammaNNoteRows(
+    gammaNote,
+    Math.max(
+      10,
+      Math.min(100, Math.floor((g.columnWidth + g.length + 60) / 8)),
+    ),
+  );
   const xml = (s: string) =>
     s
       .replaceAll("&", "&amp;")
@@ -37,11 +72,12 @@ export function toSvg(p: Piece): string {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;");
   const width = g.columnWidth + g.length + 180,
-    height = g.height + 260;
+    height =
+      g.height + 260 + (gammaRows.length ? 40 + gammaRows.length * 16 : 0);
   const path = piecePoints(p)
     .map(([x, y]) => `${x},${-y}`)
     .join(" ");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}"><rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.7 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-g.columnWidth - 90} -170 ${width} ${height}">${gammaNote ? `<desc>${xml(gammaNote)}</desc>` : ""}<rect x="${-g.columnWidth - 90}" y="-170" width="${width}" height="${height}" fill="white"/><g stroke="#3e4c60" stroke-width="2" fill="#f2f4f7"><rect x="${-g.columnWidth}" y="-80" width="${g.columnWidth}" height="${g.height + 140}"/><polygon points="${path}"/></g><g font-family="sans-serif" font-size="12" fill="#33445c"><text x="${-g.columnWidth}" y="-130">${xml(p.name)} - ConsoloStruct 0.7 | GEOMETRIA NAO EXECUTIVA</text><text x="${-g.columnWidth}" y="${g.height + 85}">Unidades: mm. Consultar memoria de calculo. Desenho nao executivo.</text>${gammaRows.map((row, index) => `<text x="${-g.columnWidth}" y="${g.height + 110 + index * 16}">${xml(row)}</text>`).join("")}</g></svg>`;
 }
 export function toDxf(p: Piece): string {
   const g = p.geometry;
@@ -109,6 +145,30 @@ export function toDxf(p: Piece): string {
     1,
     "ConsoloStruct 0.7 - GEOMETRIA NAO EXECUTIVA - NAO EXECUTIVO",
   );
+  gammaNNoteRows(gammaNGeometryNote(p)).forEach((row, index) =>
+    lines.push(
+      0,
+      "TEXT",
+      100,
+      "AcDbEntity",
+      8,
+      "AVISO",
+      100,
+      "AcDbText",
+      10,
+      -g.columnWidth,
+      20,
+      -g.height - 40 - index * 18,
+      40,
+      8,
+      1,
+      row.replace(
+        /[^\x20-\x7e]/g,
+        (c) =>
+          `\\U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`,
+      ),
+    ),
+  );
   lines.push(0, "ENDSEC", 0, "EOF");
   return lines.join("\n") + "\n";
 }
@@ -121,7 +181,9 @@ export function toCsv(project: Project) {
   const withDuctility = results.some((r) =>
     r.checks.some((c) => c.id === "ductilityXd"),
   );
-
+  const withGammaN = project.pieces.some(
+    (p) => p.design.gammaNPolicy === "table9062",
+  );
   const rows: unknown[][] = [
     [
       "ConsoloStruct 0.7 - Quantidades e verificacoes ELU; consultar memoria e pendencias",
@@ -145,8 +207,22 @@ export function toCsv(project: Project) {
       "Costura superior necessaria (cm2)",
       "Ancoragem necessaria (cm)",
       "Combinacao do tirante",
+      "N3 ramos efetivos por posicao",
+      "N3 area fornecida (mm2)",
+      "N4 barras por peca",
+      "N4 diametro (mm)",
+      "N4 C unitario (cm)",
+      "N4 massa total (kg)",
     ],
   ];
+  if (withGammaN)
+    rows[1].push(
+      "Politica gamma n",
+      "gamma n 9062",
+      "gamma n adotado",
+      "Piso de referencia gamma n",
+      "Justificativa informada gamma n",
+    );
   if (withDuctility)
     for (const id of ductilityCheckIds)
       rows[1].push(
@@ -162,6 +238,8 @@ export function toCsv(project: Project) {
       );
   for (const [index, p] of project.pieces.entries()) {
     const r = results[index];
+    const n4 = constructiveGeometry(p);
+    const n4Cut = Math.ceil(n4.path.length - 1e-7);
     rows.push([
       p.name,
       p.description,
@@ -187,6 +265,29 @@ export function toCsv(project: Project) {
         ? ""
         : number(r.values.anchorRequired / 10, 3),
       r.governingCase,
+      p.rebar.stirrupBranches ?? 2,
+      number(
+        area(
+          (p.rebar.stirrupBranches ?? 2) * p.rebar.stirrupCount,
+          p.rebar.stirrupDiameter,
+        ),
+        3,
+      ),
+      n4.branches,
+      n4.diameter,
+      n4.path.valid ? number(n4Cut / 10, 1) : "",
+      n4.path.valid
+        ? number(steelMass(n4Cut, n4.diameter) * n4.branches * p.quantity, 3)
+        : "",
+      ...(withGammaN
+        ? [
+            gammaNPolicyLabels[gammaNDecision(p.design).policy],
+            r.values.gammaN9062 ?? "",
+            r.values.gammaN ?? "",
+            1.2,
+            p.design.gammaNJustification ?? "",
+          ]
+        : []),
       ...(withDuctility
         ? ductilityCheckIds.flatMap((id) => {
             const c = r.checks.find((v) => v.id === id);
@@ -335,6 +436,8 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   result.reasons.forEach((r) => line(r, 10, true));
   title("1. Hipoteses e alcance");
   result.assumptions.forEach((a, i) => line(`${i + 1}. ${a}`));
+  line(gammaNDecisionText(result.gammaNDecision ?? gammaNDecision(p.design)));
+  line(gammaNReference);
   title("2. Identificacao das entradas");
   line(
     `b=${p.geometry.width} mm; h=${p.geometry.height} mm; h2=${p.geometry.tipHeight} mm; L=${p.geometry.length} mm; a=${p.geometry.loadOffset} mm; cnom=${p.geometry.cover} mm; P=${p.geometry.columnWidth} mm.`,
@@ -344,7 +447,7 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
       `Concreto excedente: remover. Situacao: ${concreteProfile(p).status === "removed" ? "recorte aplicado abaixo da biela" : "recorte nao aplicado, geometria original"}; ver nota excessConcrete.`,
     );
   line(
-    `fck=${p.materials.fck} MPa; fyk=${p.materials.fyk} MPa. N1=${p.rebar.tieCount} ramos phi ${p.rebar.tieDiameter}; N2=${p.rebar.stitchCount} estribos phi ${p.rebar.stitchDiameter}; N3=${p.rebar.stirrupCount} estribos phi ${p.rebar.stirrupDiameter}.`,
+    `fck=${p.materials.fck} MPa; fyk=${p.materials.fyk} MPa. N1=${p.rebar.tieCount} ramos phi ${p.rebar.tieDiameter}; N2=${p.rebar.stitchCount} estribos phi ${p.rebar.stitchDiameter}; N3=${p.rebar.stirrupCount} posicoes, ${p.rebar.stirrupBranches ?? 2} ramos efetivos, phi ${p.rebar.stirrupDiameter}; N4=${p.rebar.stirrupBranches ?? 2} barras phi ${p.rebar.constructiveDiameter ?? 8}, sem contribuicao resistente.`,
   );
   line(
     `Tirante: ${steelLabel(p.materials.fyk)}; transversal: ${steelLabel(p.design.fykTransverse)}.`,
@@ -353,6 +456,11 @@ export async function toPdf(project: Project, p: Piece): Promise<Uint8Array> {
   line(
     `Acoes principais: V=${num(p.loads.vertical)} N; H=${num(p.loads.horizontal)} N; gammaf=${p.loads.gamma}. Os parametros completos constam do apendice.`,
   );
+  const n4 = constructiveGeometry(p);
+  line(
+    `N4 construtiva: face inferior com dobra frontal e prolongamento no suporte; ${n4.branches} barras phi ${n4.diameter} mm; C unitario=${number(Math.ceil(n4.path.length - 1e-7) / 10, 1)} cm; massa total=${number(steelMass(Math.ceil(n4.path.length - 1e-7), n4.diameter) * n4.branches * p.quantity, 3)} kg. Consultar forma e pendencias no detalhamento.`,
+  );
+  n4.problems.forEach((message) => line(message, 10, true));
   title("3. Envelope de verificacoes");
   line(
     `Combinacao determinante da area do tirante: ${result.governingCase || "--"}. Cada verificacao e envelopada separadamente; nao se misturam V e H de casos diferentes.`,
